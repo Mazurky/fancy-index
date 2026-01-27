@@ -1,56 +1,210 @@
 # Fancy Index
 
-A responsive Apache index page.
+[![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](https://github.com/TheClashFruit/fancyindex-apache)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-I was tired of seeing the ugly apache-generated index page, so I decided to do something about it. Inspired by [Seti UI](https://github.com/jesseweed/seti-ui) and [atom file-icons](https://github.com/file-icons/atom), this project adds an `.htaccess` file which tells apache to use a table, among other things, instead of `<pre>`.
+> **Note:** This is a fork of the original [fancy-index](https://github.com/glen-cheney/fancy-index) by Glen Cheney. This version has been completely modernized with the help of AI to feature a sleek 2026 aesthetic, improved accessibility, and new functionality including:
+> - Deep search (recursive search through subdirectories)
+> - Light/Dark theme toggle
+> - Keyboard navigation
+> - Breadcrumb navigation
+> - Statistics bar
+> - Modern CSS with design tokens
 
-### Before Fancy Index:
-![before fancy index](before.png)
+Transform the default Apache directory index from boring and dated to sleek and professional.
 
-### After Fancy Index
-![after fancy index](after.png)
+## Features
 
+### Design
+- **Modern UI** - Clean, minimal futuristic design with CSS custom properties
+- **Light/Dark Themes** - Manual toggle with localStorage persistence
+- **Responsive** - Works beautifully on desktop, tablet, and mobile
+- **High Contrast Support** - WCAG AA compliant accessibility
 
-## Setup
+### Functionality
+- **Real-time Search** - Filter files instantly as you type
+- **Deep Search** - Recursively search through subdirectories (toggle in search bar)
+- **Keyboard Navigation** - Navigate with arrow keys, Enter to open
+- **Breadcrumb Navigation** - Easy path traversal
+- **Statistics Bar** - Shows file/folder counts and total size
+- **Smart Sorting** - Version-aware natural sorting
 
-I'm going to assume you're using a `Sites` folder with apache, but it could be done differently. Wherever you see `USERNAME`, use your username.
+### Performance
+- **Fast Initial Render** - Critical CSS inlined, deferred JS
+- **Graceful Degradation** - Works without JavaScript
+- **Large Directory Support** - Optimized for thousands of files
+- **Caching Headers** - Assets cached for optimal performance
 
-1. Clone or download the files.
-2. Add them to your `Sites` directory. The structure should be `/Users/USERNAME/Sites/fancy-index`.
-3. Copy the `.htaccess` file up one directory to `/Users/USERNAME/Sites/.htaccess`.
-4. Update your `DocumentRoot` in `/etc/apache2/users/USERNAME.conf` to point to your `Sites`. This will also cause `localhost` to point to `Sites` and you won't have to use the `~USERNAME` to access it.
+### Security
+- **XSS Protected** - All dynamic content properly escaped
+- **Security Headers** - X-Content-Type-Options, X-XSS-Protection
+- **Hidden Files** - Sensitive files automatically hidden
 
-This is what mine looks like:
+## Screenshots
+
+### Default View
+![Default View](before.png)
+
+### Light View
+![Light View](after.png)
+
+### Dark Theme
+![Dark Theme](after_dark.png)
+
+## Installation
+
+### Requirements
+- Apache HTTP Server 2.4+
+- `mod_autoindex` enabled
+- `mod_headers` (optional, for security headers)
+- `mod_expires` (optional, for caching)
+- `mod_deflate` (optional, for compression)
+
+### Quick Setup
+
+1. **Clone or download** the repository:
+   ```bash
+   git clone https://github.com/Mazurky/fancy-index.git
+   ```
+
+2. **Copy files** to your web root:
+   ```bash
+   cp -r fancy-index /var/www/html/
+   ```
+
+3. **Copy `.htaccess`** to the directory you want to index:
+   ```bash
+   cp fancy-index/.htaccess /var/www/html/.htaccess
+   ```
+
+4. **Ensure Apache allows** `.htaccess` overrides:
+   ```apache
+   <Directory "/var/www/html">
+       AllowOverride All
+       Options Indexes FollowSymLinks
+       Require all granted
+   </Directory>
+   ```
+
+5. **Restart Apache**:
+   ```bash
+   sudo systemctl restart apache2
+   ```
+
+## Configuration
+
+### Customizing Hidden Files
+
+Edit the `IndexIgnore` directive in `.htaccess`:
+
 ```apache
-DocumentRoot "/Users/glen.cheney/Sites"
-
-<Directory "/Users/glen.cheney/Sites">
-    AllowOverride All
-    Options Indexes MultiViews FollowSymLinks
-    Require all granted
-</Directory>
-
+IndexIgnore .git .svn .DS_Store .htaccess node_modules fancy-index
 ```
 
-Now restart apache `sudo apachectl restart`.
+### Changing the Theme
 
-If you're having trouble or don't see the correct files, follow one of these guides ([Yosemite](http://coolestguidesontheplanet.com/get-apache-mysql-php-phpmyadmin-working-osx-10-10-yosemite/), [El Capitan](http://coolestguidesontheplanet.com/get-apache-mysql-php-and-phpmyadmin-working-on-osx-10-11-el-capitan/), [Sierra](https://coolestguidesontheplanet.com/get-apache-mysql-php-and-phpmyadmin-working-on-macos-sierra/), [High Sierra](https://coolestguidesontheplanet.com/install-apache-mysql-php-and-phpmyadmin-on-macos-high-sierra-10-13/)) to get your Sites folder working.
+The theme can be changed via:
+1. **Manual Toggle** - Click the theme button in the header (persists in localStorage)
+2. **Force Theme** - Set `data-theme="light"` or `data-theme="dark"` on `<html>` in header.html
 
-## Mobile Comparison
+### Customizing Colors
 
-Now you don't have to zoom in or be a sniper with your finger!
+Edit the CSS custom properties in `style.css`:
 
-| Default  | Fancy  |
-|:--------:|:------:|
-|![before fancy index (mobile)](before_mobile.png)  |  ![after fancy index (mobile)](after_mobile.png)|
+```css
+:root {
+  --color-accent-primary: #6366f1;  /* Change primary accent */
+  --color-link: #4f46e5;            /* Change link color */
+  /* ... */
+}
+```
 
-## Customizing hidden files and directories
+### Configuring Features
 
-If you want to hide some files or directories, for example the `fancy-index` directory, there is a `IndexIgnore` directive in `.htaccess` file.
+In `script.js`, modify the `CONFIG` object:
 
-1. Edit `.htaccess` file in root directory.
-2. Look for the "IGNORE THESE FILES" section.
-3. Update the `IndexIgnore` directive with the path of files and directories to hide, separated by spaces.
-	* For example: `IndexIgnore .ftpquota .DS_Store .git /fancy-index`
-4. Save the changes.
-5. Reload the index page.
+```javascript
+const CONFIG = {
+  dateFormatOptions: {
+    relative: false,  // Set to true for relative dates ("2 hours ago")
+    absoluteFallbackDays: 30,  // Show absolute date after this many days
+  },
+  searchDebounceDelay: 150,  // Search delay in ms
+  // ...
+};
+```
+
+### Custom Icons
+
+Add new icon mappings in `.htaccess`:
+
+```apache
+AddIcon /fancy-index/icons/your-icon.svg .yourext
+AddDescription "Your file type" .yourext
+```
+
+## Keyboard Shortcuts
+
+| Key | Action |
+|-----|--------|
+| `/` | Focus search |
+| `Ctrl+Shift+F` | Toggle deep search |
+| `↑` / `k` | Move up |
+| `↓` / `j` | Move down |
+| `Enter` | Open file/folder |
+| `Home` | Go to first item |
+| `End` | Go to last item |
+| `Escape` | Clear search |
+| `Tab` | Exit search to file list |
+
+## Browser Support
+
+- Chrome 90+
+- Firefox 88+
+- Safari 14+
+- Edge 90+
+- Opera 76+
+
+Graceful degradation for older browsers (no JavaScript features).
+
+## Apache Module Requirements
+
+| Module | Purpose | Required |
+|--------|---------|----------|
+| `mod_autoindex` | Directory listing | ✅ Yes |
+| `mod_headers` | Security headers | ❌ Optional |
+| `mod_expires` | Asset caching | ❌ Optional |
+| `mod_deflate` | Compression | ❌ Optional |
+
+Enable modules:
+```bash
+sudo a2enmod autoindex headers expires deflate
+sudo systemctl restart apache2
+```
+
+## Migrating from v1.x
+
+Version 2.0 is a complete rewrite. Key changes:
+
+1. **CSS Variables** - All colors now use CSS custom properties
+2. **Theme System** - New light/dark/auto theme support
+3. **Modular JS** - Refactored to use modules and IIFE
+4. **New Features** - Breadcrumbs, stats bar, keyboard nav
+5. **Better A11y** - ARIA labels, focus states, skip links
+
+To migrate:
+1. Backup your custom `.htaccess` icon/description additions
+2. Replace all files with v2.0
+3. Re-apply your custom additions to the new `.htaccess`
+
+## License
+
+MIT License - see [LICENSE](LICENSE) for details.
+
+## Credits
+
+- Original project by [Glen Cheney](https://github.com/glen-cheney/fancy-index)
+
+---
+
+Made for the Apache community

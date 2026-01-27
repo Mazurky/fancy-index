@@ -1,11 +1,17 @@
 # ENABLE DIRECTORY VIEWS
 Options +Indexes
 
+# MIME type for SVG icons
 AddType image/svg+xml svg svgz
 AddEncoding gzip svgz
 
-# STRONG HTACCESS PROTECTION
-<Files ~ "^.*\.([Hh][Tt][Aa])">
+
+# ==========================================================================
+# Security Configuration
+# ==========================================================================
+
+# Protect .htaccess and other sensitive files
+<Files ~ "^\.">
   <IfVersion < 2.3>
     order allow,deny
     deny from all
@@ -15,157 +21,436 @@ AddEncoding gzip svgz
   </IfVersion>
 </Files>
 
-# DIRECTORY CUSTOMIZATION
+# Prevent access to backup files
+<FilesMatch "\.(bak|backup|old|orig|save|swp|tmp)$">
+  <IfVersion < 2.3>
+    order allow,deny
+    deny from all
+  </IfVersion>
+  <IfVersion >= 2.3>
+    Require all denied
+  </IfVersion>
+</FilesMatch>
+
+# Security headers (if mod_headers is available)
+<IfModule mod_headers.c>
+  # Prevent MIME type sniffing
+  Header set X-Content-Type-Options "nosniff"
+  # Enable XSS filtering
+  Header set X-XSS-Protection "1; mode=block"
+  # Clickjacking protection (adjust as needed)
+  Header set X-Frame-Options "SAMEORIGIN"
+  # Referrer policy
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# ==========================================================================
+# Directory Indexing Configuration
+# ==========================================================================
+
 <IfModule mod_autoindex.c>
 
-  # SET INDEX OPTIONS
-  IndexOptions IgnoreCase FancyIndexing HTMLTable SuppressHTMLPreamble FoldersFirst VersionSort NameWidth=* DescriptionWidth=* XHTML IconHeight=16 IconWidth=16
+  # ========================================================================
+  # Index Options
+  # ========================================================================
+  # 
+  # FancyIndexing    - Enable fancy directory listings
+  # HTMLTable        - Use HTML table for layout (required for our CSS)
+  # SuppressHTMLPreamble - We provide our own HTML in header.html
+  # FoldersFirst     - Show directories before files
+  # VersionSort      - Natural sorting (file1, file2, file10 instead of file1, file10, file2)
+  # NameWidth=*      - Auto-size name column
+  # DescriptionWidth=* - Auto-size description column
+  # XHTML            - Generate XHTML-compliant output
+  # IconsAreLinks    - Make icons clickable links
+  # IgnoreCase       - Case-insensitive sorting
+  # SuppressRules    - Don't add horizontal rules
+  # TrackModified    - Return Last-Modified header based on directory contents
+  # Charset=UTF-8    - Ensure proper character encoding
+  # Type=text/html   - Ensure HTML content type
+  # IconHeight=18 IconWidth=18 - Consistent icon dimensions
+  # 
+  IndexOptions FancyIndexing HTMLTable SuppressHTMLPreamble FoldersFirst VersionSort NameWidth=* DescriptionWidth=* XHTML IconsAreLinks IgnoreCase SuppressRules TrackModified Charset=UTF-8 Type=text/html IconHeight=18 IconWidth=18
 
-  # Other options.
-  # IconsAreLinks SuppressColumnSorting
-
-  # SET DISPLAY ORDER
+  # Default sort order
   IndexOrderDefault Ascending Name
 
+  # Link to our custom stylesheet
   IndexStyleSheet /fancy-index/style.css
 
-  # SPECIFY HEADER FILE
+  # Custom header file (contains opening HTML, head, and opening body)
   HeaderName /fancy-index/header.html
 
-  # SPECIFY FOOTER FILE
+  # Custom footer file (contains closing HTML and script)
   ReadmeName /fancy-index/footer.html
 
-  # IGNORE THESE FILES
+  # ========================================================================
+  # Files to Ignore
+  # ========================================================================
+  
   IndexIgnoreReset ON
-  IndexIgnore .ftpquota .DS_Store .git fancy-index
+  IndexIgnore .ftpquota .DS_Store .git .gitignore .gitattributes .svn .hg fancy-index webui .htaccess .htpasswd *.bak *.backup *.old *.orig *.swp *.tmp *~ \#*\#
 
-  # DEFAULT ICON
+  # ========================================================================
+  # Default and Special Icons
+  # ========================================================================
+
+  # Default icon for unknown file types
   DefaultIcon /fancy-index/icons/file-text.svg
 
+  # Special entries
   AddIcon /fancy-index/icons/back.svg ..
   AddIcon /fancy-index/icons/github.svg .github
   AddIcon /fancy-index/icons/nodejs.svg node_modules
   AddIcon /fancy-index/icons/file-directory.svg ^^DIRECTORY^^
+  AddIcon /fancy-index/icons/file-text.svg ^^BLANKICON^^
 
-  # SPECIFIC FILE ICONS
-  # https://github.com/file-icons/source
-  AddIcon /fancy-index/icons/file-binary.svg .com .exe
-  AddIcon /fancy-index/icons/file-code.svg .c .h .mustache .rust .source .apache .yml .jade
-  AddIcon /fancy-index/icons/file-media.svg .png .jpg .jpeg .webp .gif .bmp .mp4 .webm .ogv .mov .ico
-  AddIcon /fancy-index/icons/file-pdf.svg .pdf
-  AddIcon /fancy-index/icons/file-text.svg .txt .srt README readme Procfile
-  AddIcon /fancy-index/icons/file-zip.svg .zip .z .gz .Z .tgz .tar.gz .tar .rar
-  AddIcon /fancy-index/icons/gear.svg .htaccess .env .env-dev .env-production .env-staging
-  AddIcon /fancy-index/icons/config.svg .conf .ini .cfg .prefs
-  AddIcon /fancy-index/icons/less.svg .less
-  AddIcon /fancy-index/icons/css.svg .css
-  AddIcon /fancy-index/icons/html.svg .html .htm
-  AddIcon /fancy-index/icons/coffee.svg .coffee
-  AddIcon /fancy-index/icons/java.svg .java
-  AddIcon /fancy-index/icons/markdown.svg .markdown .md
-  AddIcon /fancy-index/icons/eslint.svg *.eslintignore *.eslintrc.js *.eslintrc.json *.eslintrc *.eslintrc.yml
-  AddIcon /fancy-index/icons/webpack.svg webpack.config.js
-  AddIcon /fancy-index/icons/rollup.svg rollup.config.js
-  AddIcon /fancy-index/icons/postcss.svg postcss.config.js *.postcssrc *.postcssrc.json *.postcssrc.js *.postcssrc.yml
-  AddIcon /fancy-index/icons/grunt.svg gruntfile.js Gruntfile.js
-  AddIcon /fancy-index/icons/gulp.svg gulpfile.js Gulpfile.js
-  AddIcon /fancy-index/icons/js.svg .js
-  AddIcon /fancy-index/icons/composer.svg composer.json composer.lock composer.phar
-  AddIcon /fancy-index/icons/bower.svg bower.json
-  AddIcon /fancy-index/icons/npm.svg package.json package-lock.json
-  AddIcon /fancy-index/icons/settings.svg .json
-  AddIcon /fancy-index/icons/mustache.svg .mustache
-  AddIcon /fancy-index/icons/php.svg .php
-  AddIcon /fancy-index/icons/python.svg .py
-  AddIcon /fancy-index/icons/ruby.svg .rb
-  AddIcon /fancy-index/icons/rust.svg .rust
-  AddIcon /fancy-index/icons/sass.svg .sass
-  AddIcon /fancy-index/icons/scss.svg .scss
-  AddIcon /fancy-index/icons/svg.svg .svg .svgx .eps
-  AddIcon /fancy-index/icons/xml.svg .xml
-  AddIcon /fancy-index/icons/typescript.svg .ts
-  AddIcon /fancy-index/icons/vue.svg .vue
-  AddIcon /fancy-index/icons/yarn.svg yarn.lock
-  AddIcon /fancy-index/icons/babel.svg *.babelrc
-  AddIcon /fancy-index/icons/git.svg *.gitignore *.gitattributes
-  AddIcon /fancy-index/icons/editor-config.svg .editorconfig
-  AddIcon /fancy-index/icons/shopify.svg .liquid
-  AddIcon /fancy-index/icons/nunjucks.svg .nunjucks
-  AddIcon /fancy-index/icons/pug.svg .pug
-  AddIcon /fancy-index/icons/adobe-photoshop.svg .psd
-  AddIcon /fancy-index/icons/adobe-illustrator.svg .ai
-  AddIcon /fancy-index/icons/stylus.svg .styl
-  AddIcon /fancy-index/icons/terminal.svg .sh .bash
-  AddIcon /fancy-index/icons/database.svg .sql .mysql .sqlite .dsql .db
-  AddIcon /fancy-index/icons/vagrant.svg vagrantfile Vagrantfile
-  AddIcon /fancy-index/icons/file-word.svg .doc .docx
-  AddIcon /fancy-index/icons/file-excel.svg .xls .xlsx
-  AddIcon /fancy-index/icons/yaml.svg .yml .yaml
-  AddIcon /fancy-index/icons/brainfuck.svg .b
-  AddIcon /fancy-index/icons/cobol.svg .cbl .cob .cpy
-  AddIcon /fancy-index/icons/docker.svg docker-compose.yml
-  AddIcon /fancy-index/icons/virtualbox.svg .ova .vbox
+  # ========================================================================
+  # File Type Icons (Alphabetically Organized)
+  # ========================================================================
+
+  # --- Archives & Packages ---
+  AddIcon /fancy-index/icons/file-zip.svg .zip .z .gz .Z .tgz .tar.gz .tar .rar .7z .bz2 .xz .lz .lzma .cab .arj
   AddIcon /fancy-index/icons/rpm.svg .rpm
   AddIcon /fancy-index/icons/deb.svg .deb
 
-  # FILE DESCRIPTIONS
-  AddDescription "MPEG Layer 3 Format" .mp3
-  AddDescription "MPEG Layer 4 Format" .mp4
-  AddDescription "SubRip subtitles format" .srt
-  AddDescription "GZIP compressed TAR archive" .tgz .tar.gz
-  AddDescription "GZIP compressed archive" .Z .z .gz .zip
-  AddDescription "RAR compressed archive" .rar
-  AddDescription "TAR compressed archive" .tar
-  AddDescription "ZIP compressed archive" .zip
-  AddDescription "Windows executable file" .exe
-  AddDescription "Common Gateway Interface" .cgi
-  AddDescription "Joint Photographics Experts Group" .jpg .jpeg .jpe
-  AddDescription "Graphic Interchange Format" .gif
-  AddDescription "Portable Network Graphic" .png
-  AddDescription "Vector graphic" .ps .ai .eps
-  AddDescription "Hypertext Markup Language" .html .shtml .htm
-  AddDescription "Cascading Style Sheet" .css
-  AddDescription "DocType Definition" .dtd
-  AddDescription "Extensible Markup Language" .xml
-  AddDescription "Win32 compressed HTML help" .chm
-  AddDescription "Adobe Portable Document Format" .pdf
-  AddDescription "Plain text file" .txt .nfo .faq .readme
-  AddDescription "Unix man page" .man
-  AddDescription "Email data" .eml .mbox
-  AddDescription "Microsoft Word document" .doc .docx
-  AddDescription "Microsoft Excel document" .xls .xlsx
-  AddDescription "PHP: Hypertext Preprocessor script" .php  .php3 .php4
-  AddDescription "PHP: Hypertext Preprocessor source code" .phps
-  AddDescription "JavaScript Object Notation" .json
-  AddDescription "JavaScript" .js
-  AddDescription "Java code"  .java
-  AddDescription "Unix shell script" .sh .shar .csh .ksh .command
-  AddDescription "Mac OS X shell script" .command
-  AddDescription "Configuration file" .conf
-  AddDescription "Mac OS X terminal" .term
-  AddDescription "BitTorrent file" .torrent
-  AddDescription "Windows link" .lnk .url
-  AddDescription "Scalable Vector Graphic" .svg
-  AddDescription "OpenDocument Text" .odt
-  AddDescription "OpenDocument Spreadsheet" .ods
-  AddDescription "OpenDocument Presentation" .odp
-  AddDescription "OpenDocument Graphics" .odg
-  AddDescription "OpenDocument Chart" .odc
-  AddDescription "OpenDocument Formula" .odf
-  AddDescription "OpenDocument Database" .odb
-  AddDescription "OpenDocument Image" .odi
-  AddDescription "OpenDocument Text Master" .odm
-  AddDescription "OpenDocument Text Template" .ott
-  AddDescription "OpenDocument Spreadsheet Template" .ots
-  AddDescription "OpenDocument Presentation Template" .otp
-  AddDescription "OpenDocument Graphics Template" .otg
-  AddDescription "YAML: Yet Another Markup Language" .yaml .yml
-  AddDescription "SASS: Syntactically Awesome Stylesheets" .sass
-  AddDescription "SCSS: Sassy Cascading Style Sheet" .scss
-  AddDescription "Travis configuration" .travis
-  AddDescription "RPM installation package" .rpm
-  AddDescription "Debian installation package" .deb
+  # --- Audio ---
+  AddIcon /fancy-index/icons/file-media.svg .mp3 .wav .flac .aac .ogg .m4a .wma .aiff .ape
 
-  # DEFAULT DESCRIPTION
-  # AddDescription "[<span class='description'>Unknown item</span>]" *
+  # --- Binary & Executables ---
+  AddIcon /fancy-index/icons/file-binary.svg .com .exe .msi .dll .so .dylib .bin .app .dmg .apk .ipa
+
+  # --- Configuration & Data ---
+  AddIcon /fancy-index/icons/gear.svg .htaccess .env .env.local .env.development .env.production .env.staging .env.test .env.example
+  AddIcon /fancy-index/icons/config.svg .conf .ini .cfg .prefs .cnf .toml
+  AddIcon /fancy-index/icons/settings.svg .json
+  AddIcon /fancy-index/icons/yaml.svg .yml .yaml
+
+  # --- Database ---
+  AddIcon /fancy-index/icons/database.svg .sql .mysql .sqlite .sqlite3 .dsql .db .mdb .accdb .pgsql
+
+  # --- Development Tools & Build ---
+  AddIcon /fancy-index/icons/babel.svg .babelrc .babelrc.js .babelrc.json babel.config.js babel.config.json
+  AddIcon /fancy-index/icons/bower.svg bower.json .bowerrc
+  AddIcon /fancy-index/icons/composer.svg composer.json composer.lock composer.phar
+  AddIcon /fancy-index/icons/docker.svg Dockerfile docker-compose.yml docker-compose.yaml .dockerignore
+  AddIcon /fancy-index/icons/editor-config.svg .editorconfig
+  AddIcon /fancy-index/icons/eslint.svg .eslintignore .eslintrc .eslintrc.js .eslintrc.json .eslintrc.yml .eslintrc.yaml eslint.config.js eslint.config.mjs
+  AddIcon /fancy-index/icons/git.svg .gitignore .gitattributes .gitmodules .gitkeep
+  AddIcon /fancy-index/icons/grunt.svg Gruntfile.js gruntfile.js Gruntfile.coffee
+  AddIcon /fancy-index/icons/gulp.svg gulpfile.js Gulpfile.js gulpfile.ts gulpfile.babel.js
+  AddIcon /fancy-index/icons/npm.svg package.json package-lock.json .npmrc .npmignore
+  AddIcon /fancy-index/icons/postcss.svg postcss.config.js postcss.config.cjs postcss.config.mjs .postcssrc .postcssrc.json .postcssrc.js .postcssrc.yml
+  AddIcon /fancy-index/icons/rollup.svg rollup.config.js rollup.config.mjs rollup.config.ts
+  AddIcon /fancy-index/icons/vagrant.svg Vagrantfile vagrantfile
+  AddIcon /fancy-index/icons/webpack.svg webpack.config.js webpack.config.ts webpack.config.babel.js
+  AddIcon /fancy-index/icons/yarn.svg yarn.lock .yarnrc .yarnrc.yml
+
+  # --- Documents ---
+  AddIcon /fancy-index/icons/file-pdf.svg .pdf
+  AddIcon /fancy-index/icons/file-text.svg .txt .text .srt .sub .vtt .nfo .diz README readme Procfile LICENSE license CHANGELOG changelog
+  AddIcon /fancy-index/icons/file-word.svg .doc .docx .odt .rtf
+  AddIcon /fancy-index/icons/file-excel.svg .xls .xlsx .ods .csv .tsv
+
+  # --- Fonts ---
+  AddIcon /fancy-index/icons/file-binary.svg .ttf .otf .woff .woff2 .eot
+
+  # --- Graphics & Design ---
+  AddIcon /fancy-index/icons/adobe-illustrator.svg .ai
+  AddIcon /fancy-index/icons/adobe-photoshop.svg .psd
+  AddIcon /fancy-index/icons/sketch.svg .sketch
+  AddIcon /fancy-index/icons/svg.svg .svg .svgz .eps
+  AddIcon /fancy-index/icons/file-media.svg .png .jpg .jpeg .webp .gif .bmp .ico .tiff .tif .raw .cr2 .nef .heic .heif .avif
+
+  # --- Markup & Templates ---
+  AddIcon /fancy-index/icons/code.svg .ejs .hbs .handlebars .mustache .tpl .tmpl
+  AddIcon /fancy-index/icons/html.svg .html .htm .xhtml .shtml
+  AddIcon /fancy-index/icons/markdown.svg .markdown .md .mdx .mdown .mkd
+  AddIcon /fancy-index/icons/nunjucks.svg .nunjucks .njk
+  AddIcon /fancy-index/icons/pug.svg .pug .jade
+  AddIcon /fancy-index/icons/shopify.svg .liquid
+  AddIcon /fancy-index/icons/xml.svg .xml .xsl .xslt .xsd .dtd .rss .atom .svg
+
+  # --- Programming Languages ---
+  AddIcon /fancy-index/icons/file-code.svg .c .h
+  AddIcon /fancy-index/icons/file-code.svg .cpp .hpp .cc .cxx .hxx
+  AddIcon /fancy-index/icons/brainfuck.svg .b .bf
+  AddIcon /fancy-index/icons/cobol.svg .cbl .cob .cpy
+  AddIcon /fancy-index/icons/coffee.svg .coffee .litcoffee
+  AddIcon /fancy-index/icons/file-code.svg .cs
+  AddIcon /fancy-index/icons/file-code.svg .go
+  AddIcon /fancy-index/icons/java.svg .java .jar .class .jsp
+  AddIcon /fancy-index/icons/js.svg .js .mjs .cjs .jsx
+  AddIcon /fancy-index/icons/file-code.svg .kt .kts
+  AddIcon /fancy-index/icons/file-code.svg .lua
+  AddIcon /fancy-index/icons/php.svg .php .php3 .php4 .php5 .php7 .php8 .phtml .phps
+  AddIcon /fancy-index/icons/python.svg .py .pyw .pyx .pxd .pyi .pyc .pyo
+  AddIcon /fancy-index/icons/ruby.svg .rb .rbw .rake .gemspec Gemfile Rakefile
+  AddIcon /fancy-index/icons/rust.svg .rs .rlib
+  AddIcon /fancy-index/icons/terminal.svg .sh .bash .zsh .fish .ksh .csh .tcsh .ps1 .psm1 .psd1 .bat .cmd
+  AddIcon /fancy-index/icons/file-code.svg .swift
+  AddIcon /fancy-index/icons/typescript.svg .ts .tsx .mts .cts
+  AddIcon /fancy-index/icons/vue.svg .vue
+
+  # --- Stylesheets ---
+  AddIcon /fancy-index/icons/css.svg .css
+  AddIcon /fancy-index/icons/less.svg .less
+  AddIcon /fancy-index/icons/sass.svg .sass
+  AddIcon /fancy-index/icons/scss.svg .scss
+  AddIcon /fancy-index/icons/stylus.svg .styl .stylus
+
+  # --- Video ---
+  AddIcon /fancy-index/icons/file-media.svg .mp4 .webm .ogv .mov .avi .mkv .wmv .flv .m4v .3gp
+
+  # --- Virtualization ---
+  AddIcon /fancy-index/icons/virtualbox.svg .ova .ovf .vbox .vmdk .vdi .vhd .vhdx
+
+  # ========================================================================
+  # File Descriptions
+  # ========================================================================
+
+  # Archives
+  AddDescription "ZIP compressed archive" .zip
+  AddDescription "GZIP compressed archive" .gz .Z .z
+  AddDescription "GZIP compressed TAR archive" .tgz .tar.gz
+  AddDescription "TAR archive" .tar
+  AddDescription "RAR compressed archive" .rar
+  AddDescription "7-Zip compressed archive" .7z
+  AddDescription "Bzip2 compressed archive" .bz2
+  AddDescription "XZ compressed archive" .xz
+  AddDescription "LZ compressed archive" .lz
+  AddDescription "LZMA compressed archive" .lzma
+  AddDescription "Cabinet archive" .cab
+  AddDescription "ARJ compressed archive" .arj
+  AddDescription "RPM package" .rpm
+  AddDescription "Debian package" .deb
+
+  # Audio
+  AddDescription "MP3 audio" .mp3
+  AddDescription "WAV audio" .wav
+  AddDescription "FLAC lossless audio" .flac
+  AddDescription "AAC audio" .aac
+  AddDescription "OGG Vorbis audio" .ogg
+  AddDescription "M4A audio" .m4a
+  AddDescription "Windows Media audio" .wma
+  AddDescription "AIFF audio" .aiff
+  AddDescription "Monkey's Audio" .ape
+
+  # Binary & Executables
+  AddDescription "DOS executable" .com
+  AddDescription "Windows executable" .exe
+  AddDescription "Windows installer" .msi
+  AddDescription "Windows library" .dll
+  AddDescription "Shared library" .so
+  AddDescription "macOS dynamic library" .dylib
+  AddDescription "Binary file" .bin
+  AddDescription "macOS application" .app
+  AddDescription "macOS disk image" .dmg
+  AddDescription "Android package" .apk
+  AddDescription "iOS application" .ipa
+
+  # Documents
+  AddDescription "PDF document" .pdf
+  AddDescription "Plain text file" .txt .text
+  AddDescription "NFO file" .nfo
+  AddDescription "DIZ file" .diz
+  AddDescription "Subtitle file" .srt .sub .vtt
+  AddDescription "Microsoft Word document" .doc .docx
+  AddDescription "OpenDocument text" .odt
+  AddDescription "Rich text format" .rtf
+  AddDescription "Microsoft Excel spreadsheet" .xls .xlsx
+  AddDescription "OpenDocument spreadsheet" .ods
+  AddDescription "CSV data file" .csv
+  AddDescription "TSV data file" .tsv
+
+  # Fonts
+  AddDescription "TrueType font" .ttf
+  AddDescription "OpenType font" .otf
+  AddDescription "Web Open Font Format" .woff
+  AddDescription "Web Open Font Format 2" .woff2
+  AddDescription "Embedded OpenType font" .eot
+
+  # Graphics & Design
+  AddDescription "PNG image" .png
+  AddDescription "JPEG image" .jpg .jpeg
+  AddDescription "WebP image" .webp
+  AddDescription "GIF image" .gif
+  AddDescription "BMP image" .bmp
+  AddDescription "Favicon" .ico
+  AddDescription "TIFF image" .tiff .tif
+  AddDescription "RAW image" .raw
+  AddDescription "Canon RAW image" .cr2
+  AddDescription "Nikon RAW image" .nef
+  AddDescription "SVG vector graphic" .svg .svgz
+  AddDescription "EPS vector graphic" .eps
+  AddDescription "Adobe Photoshop document" .psd
+  AddDescription "Adobe Illustrator document" .ai
+  AddDescription "Sketch design file" .sketch
+  AddDescription "HEIF image" .heic .heif
+  AddDescription "AVIF image" .avif
+
+  # Markup & Templates
+  AddDescription "HTML document" .html .htm .xhtml .shtml
+  AddDescription "XML document" .xml
+  AddDescription "XSL stylesheet" .xsl .xslt
+  AddDescription "XML Schema" .xsd
+  AddDescription "Document Type Definition" .dtd
+  AddDescription "RSS feed" .rss
+  AddDescription "Atom feed" .atom
+  AddDescription "Markdown document" .md .markdown .mdown .mdx .mkd
+  AddDescription "Pug template" .pug .jade
+  AddDescription "Nunjucks template" .nunjucks .njk
+  AddDescription "Liquid template" .liquid
+  AddDescription "EJS template" .ejs
+  AddDescription "Handlebars template" .hbs .handlebars
+  AddDescription "Mustache template" .mustache
+  AddDescription "Template file" .tpl .tmpl
+
+  # Stylesheets (before Programming - .css must match before .c)
+  AddDescription "Cascading Style Sheet" .css
+  AddDescription "SASS stylesheet" .sass
+  AddDescription "SCSS stylesheet" .scss
+  AddDescription "LESS stylesheet" .less
+  AddDescription "Stylus stylesheet" .styl .stylus
+
+  # Configuration (before Programming - .conf, .cfg must match before .c)
+  AddDescription "Configuration file" .conf .cfg .cnf .prefs
+  AddDescription "JSON data file" .json
+  AddDescription "YAML configuration" .yml .yaml
+  AddDescription "TOML configuration" .toml
+  AddDescription "INI configuration" .ini
+  AddDescription "Environment configuration" .env
+  AddDescription "Editor configuration" .editorconfig
+  AddDescription "Git ignore rules" .gitignore
+  AddDescription "Git attributes" .gitattributes
+  AddDescription "Git submodules" .gitmodules
+  AddDescription "Git keep file" .gitkeep
+  AddDescription "NPM configuration" .npmrc
+  AddDescription "NPM ignore rules" .npmignore
+  AddDescription "NPM package manifest" package.json
+  AddDescription "NPM lock file" package-lock.json
+  AddDescription "Yarn lock file" yarn.lock
+  AddDescription "Yarn configuration" .yarnrc .yarnrc.yml
+  AddDescription "Composer manifest" composer.json
+  AddDescription "Composer lock file" composer.lock
+  AddDescription "Composer executable" composer.phar
+  AddDescription "Bower manifest" bower.json
+  AddDescription "Bower configuration" .bowerrc
+  AddDescription "Babel configuration" .babelrc
+  AddDescription "ESLint configuration" .eslintrc
+  AddDescription "ESLint ignore rules" .eslintignore
+  AddDescription "Docker ignore rules" .dockerignore
+  AddDescription "Dockerfile" Dockerfile
+  AddDescription "Docker Compose configuration" docker-compose.yml docker-compose.yaml
+  AddDescription "Webpack configuration" webpack.config.js webpack.config.ts
+  AddDescription "Rollup configuration" rollup.config.js rollup.config.mjs rollup.config.ts
+  AddDescription "PostCSS configuration" postcss.config.js .postcssrc
+  AddDescription "Grunt task file" Gruntfile.js gruntfile.js Gruntfile.coffee
+  AddDescription "Gulp task file" gulpfile.js Gulpfile.js gulpfile.ts
+  AddDescription "Vagrantfile" Vagrantfile vagrantfile
+
+  # Database
+  AddDescription "SQL script" .sql
+  AddDescription "MySQL script" .mysql .pgsql
+  AddDescription "SQLite database" .sqlite .sqlite3
+  AddDescription "Database file" .db .dsql
+  AddDescription "Microsoft Access database" .mdb .accdb
+
+  # Programming
+  # Note: Order matters! Longer extensions must come before shorter ones
+  # because Apache uses substring matching (e.g., .cpp must come before .c)
+  AddDescription "C++ source code" .cpp .cc .cxx
+  AddDescription "C++ header file" .hpp .hxx
+  AddDescription "CoffeeScript" .coffee .litcoffee
+  AddDescription "C source code" .c
+  AddDescription "C header file" .h
+  AddDescription "C# source code" .cs
+  AddDescription "JavaScript" .js .mjs .cjs
+  AddDescription "TypeScript" .ts .mts .cts
+  AddDescription "JSX (React)" .jsx
+  AddDescription "TSX (React TypeScript)" .tsx
+  AddDescription "Vue component" .vue
+  AddDescription "Python script" .py .pyw
+  AddDescription "Cython source" .pyx .pxd
+  AddDescription "Python stub file" .pyi
+  AddDescription "Python bytecode" .pyc .pyo
+  AddDescription "Ruby script" .rb .rbw
+  AddDescription "Rakefile" Rakefile .rake
+  AddDescription "Gemspec" .gemspec
+  AddDescription "Gemfile" Gemfile
+  AddDescription "PHP script" .php .phtml
+  AddDescription "Java source code" .java
+  AddDescription "Java class file" .class
+  AddDescription "Java archive" .jar
+  AddDescription "JSP page" .jsp
+  AddDescription "Go source code" .go
+  AddDescription "Rust source code" .rs
+  AddDescription "Rust library" .rlib
+  AddDescription "Swift source code" .swift
+  AddDescription "Kotlin source code" .kt .kts
+  AddDescription "Lua script" .lua
+  AddDescription "Shell script" .sh .bash .zsh .fish .ksh .csh .tcsh
+  AddDescription "PowerShell script" .ps1
+  AddDescription "PowerShell module" .psm1
+  AddDescription "PowerShell data" .psd1
+  AddDescription "Batch script" .bat .cmd
+  AddDescription "Brainfuck source" .b .bf
+  AddDescription "COBOL source" .cbl .cob .cpy
+
+  # Video
+  AddDescription "MP4 video" .mp4
+  AddDescription "WebM video" .webm
+  AddDescription "OGG video" .ogv
+  AddDescription "QuickTime video" .mov
+  AddDescription "AVI video" .avi
+  AddDescription "MKV video" .mkv
+  AddDescription "Windows Media video" .wmv
+  AddDescription "Flash video" .flv
+  AddDescription "M4V video" .m4v
+  AddDescription "3GP video" .3gp
+
+  # Virtualization
+  AddDescription "OVA virtual appliance" .ova
+  AddDescription "OVF virtual machine" .ovf
+  AddDescription "VirtualBox machine" .vbox
+  AddDescription "VMDK disk image" .vmdk
+  AddDescription "VDI disk image" .vdi
+  AddDescription "VHD disk image" .vhd .vhdx
+
+  # Misc
+  AddDescription "License file" LICENSE license
+  AddDescription "Readme file" README readme
+  AddDescription "Changelog" CHANGELOG changelog
+  AddDescription "Procfile (Heroku)" Procfile
+
+</IfModule>
+
+# ==========================================================================
+# Performance Optimization
+# ==========================================================================
+
+<IfModule mod_expires.c>
+  ExpiresActive On
+  
+  # CSS and JS (cache for 1 week)
+  ExpiresByType text/css "access plus 1 week"
+  ExpiresByType application/javascript "access plus 1 week"
+  ExpiresByType text/javascript "access plus 1 week"
+  
+  # SVG icons (cache for 1 month)
+  ExpiresByType image/svg+xml "access plus 1 month"
+  
+  # Images (cache for 1 month)
+  ExpiresByType image/png "access plus 1 month"
+  ExpiresByType image/jpeg "access plus 1 month"
+  ExpiresByType image/gif "access plus 1 month"
+  ExpiresByType image/webp "access plus 1 month"
+  ExpiresByType image/x-icon "access plus 1 month"
+</IfModule>
+
+<IfModule mod_deflate.c>
+  # Compress text-based resources
+  AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript
+  AddOutputFilterByType DEFLATE application/javascript application/json application/xml
+  AddOutputFilterByType DEFLATE image/svg+xml
 </IfModule>

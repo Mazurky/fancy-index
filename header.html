@@ -1,11 +1,41 @@
 <!DOCTYPE html>
-<html>
+<html lang="en" data-theme="light">
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title></title>
-  <link rel="stylesheet" type="text/css" href="/fancy-index/style.css">
-  <style>img[src$=".svg"] { width: 16px; }</style>
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="Directory listing">
+  <title>Index</title>
+  <link rel="stylesheet" href="/fancy-index/style.css">
+  <!-- Critical styles for no-JS and fast initial render -->
+  <style>
+    /* Prevent FOUC */
+    html:not([data-ready]) body { opacity: 0; }
+    html[data-ready] body { opacity: 1; transition: opacity 0.15s ease-out; }
+    /* SVG icons base size */
+    img[src$=".svg"] { width: 18px; height: 18px; }
+    /* No-JS fallback styles */
+    .no-js .js-only { display: none !important; }
+    .js .no-js-only { display: none !important; }
+  </style>
+  <script>
+    // Immediately set JS class and theme before paint
+    (function() {
+      document.documentElement.classList.remove('no-js');
+      document.documentElement.classList.add('js');
+      // Restore saved theme preference
+      var savedTheme = localStorage.getItem('fancy-index-theme');
+      if (savedTheme && ['light', 'dark'].includes(savedTheme)) {
+        document.documentElement.setAttribute('data-theme', savedTheme);
+      }
+    })();
+  </script>
+  <noscript>
+    <style>
+      html body { opacity: 1 !important; }
+      #search-container, #theme-toggle, .sort-indicator { display: none !important; }
+    </style>
+  </noscript>
 </head>
-<body>
+<body class="no-js">
+  <a href="#main-content" class="skip-link">Skip to content</a>
