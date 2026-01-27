@@ -27,6 +27,14 @@
       relative: true,
       absoluteFallbackDays: 30, // Show absolute date after this many days
     },
+    // External app link (set to null to disable)
+    externalApp: {
+      enabled: true,
+      url: '/app/',
+      name: 'Application',
+      icon: 'external', // 'download', 'external', 'grid', or 'custom'
+      openInNewTab: true,
+    },
   };
 
   // ==========================================================================
@@ -1155,6 +1163,11 @@
       // Search
       controls.appendChild(SearchComponent.createSearchUI());
       
+      // External app link
+      if (CONFIG.externalApp?.enabled) {
+        controls.appendChild(this.createExternalAppButton());
+      }
+      
       // Theme toggle
       controls.appendChild(ThemeManager.createToggleButton());
       
@@ -1164,6 +1177,44 @@
       document.title = `Index of ${titleText}`;
       
       return header;
+    },
+    
+    createExternalAppButton() {
+      const { url, name, icon, openInNewTab } = CONFIG.externalApp;
+      
+      const link = document.createElement('a');
+      link.id = 'external-app-link';
+      link.href = url;
+      link.setAttribute('aria-label', name);
+      link.setAttribute('title', name);
+      if (openInNewTab) {
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+      }
+      
+      // Icon SVGs
+      const icons = {
+        download: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>`,
+        external: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+          <polyline points="15 3 21 3 21 9"/>
+          <line x1="10" y1="14" x2="21" y2="3"/>
+        </svg>`,
+        grid: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="3" y="3" width="7" height="7"/>
+          <rect x="14" y="3" width="7" height="7"/>
+          <rect x="14" y="14" width="7" height="7"/>
+          <rect x="3" y="14" width="7" height="7"/>
+        </svg>`,
+      };
+      
+      link.innerHTML = icons[icon] || icons.download;
+      
+      return link;
     },
   };
 

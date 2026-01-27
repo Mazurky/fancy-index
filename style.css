@@ -696,6 +696,47 @@ body {
 }
 
 /* ==========================================================================
+   External App Link
+   ========================================================================== */
+
+#external-app-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  background-color: var(--color-accent-primary);
+  border: 1px solid var(--color-accent-primary);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
+  flex-shrink: 0;
+  text-decoration: none;
+}
+
+#external-app-link:hover {
+  background-color: var(--color-accent-primary-hover);
+  border-color: var(--color-accent-primary-hover);
+}
+
+#external-app-link:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+#external-app-link:active {
+  transform: scale(0.95);
+}
+
+#external-app-link svg {
+  width: 20px;
+  height: 20px;
+  color: white;
+  transition: color var(--transition-fast);
+}
+
+/* ==========================================================================
    Main Content Area
    ========================================================================== */
 
