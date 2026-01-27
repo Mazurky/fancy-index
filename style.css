@@ -1106,23 +1106,20 @@ tbody tr.keyboard-focused {
     gap: var(--space-2);
   }
   
-  .indexcolsize,
-  .indexcollastmod,
-  .indexcoldesc {
-    display: none;
-  }
-  
-  thead th:not(.indexcolname),
-  tbody td:not(.indexcolname) {
-    display: none;
-  }
-  
+  /* Horizontal scroll for table on mobile */
   .table-container {
     border-radius: var(--radius-md);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  #indexlist {
+    min-width: 600px;
   }
   
   tbody td {
     padding: var(--space-3);
+    white-space: nowrap;
   }
   
   .icon-wrapper {
