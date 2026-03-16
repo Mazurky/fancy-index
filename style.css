@@ -930,6 +930,69 @@ tbody td {
   white-space: nowrap;
 }
 
+/* Copy URL Column */
+.indexcolcopy {
+  width: 44px;
+  text-align: center;
+  padding: var(--space-2) !important;
+  white-space: nowrap;
+}
+
+.copy-url-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background-color: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  color: var(--color-text-muted);
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.copy-url-btn:hover {
+  background-color: var(--color-bg-tertiary);
+  border-color: var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+.copy-url-btn:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.copy-url-btn:active {
+  transform: scale(0.95);
+}
+
+.copy-url-btn svg {
+  width: 16px;
+  height: 16px;
+  transition: color var(--transition-fast);
+}
+
+.copy-url-btn .copied-icon {
+  display: none;
+}
+
+.copy-url-btn.copied {
+  color: var(--color-success);
+  border-color: var(--color-success);
+  background-color: rgb(16 185 129 / 0.1);
+}
+
+.copy-url-btn.copied .copy-icon {
+  display: none;
+}
+
+.copy-url-btn.copied .copied-icon {
+  display: block;
+}
+
 /* ==========================================================================
    File Icons
    ========================================================================== */
@@ -1217,7 +1280,8 @@ tbody tr.keyboard-focused {
   
   #search-container,
   #theme-toggle,
-  .skip-link {
+  .skip-link,
+  .indexcolcopy {
     display: none !important;
   }
   

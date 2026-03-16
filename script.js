@@ -54,6 +54,50 @@
   }
 
   /**
+   * Copy text to clipboard with modern API and textarea fallback
+   * @param {string} text - Text to copy
+   * @param {HTMLElement} button - Button element for visual feedback
+   */
+  function copyToClipboard(text, button) {
+    const originalLabel = button.getAttribute('aria-label');
+
+    function showFeedback() {
+      button.classList.add('copied');
+      button.setAttribute('aria-label', 'Copied!');
+      setTimeout(() => {
+        button.classList.remove('copied');
+        button.setAttribute('aria-label', originalLabel);
+      }, 2000);
+    }
+
+    function fallbackCopy() {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.top = '0';
+      textarea.style.left = '0';
+      textarea.style.opacity = '0';
+      textarea.setAttribute('aria-hidden', 'true');
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      try {
+        document.execCommand('copy');
+        showFeedback();
+      } catch (e) {
+        // Copy failed silently
+      }
+      document.body.removeChild(textarea);
+    }
+
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(showFeedback).catch(fallbackCopy);
+    } else {
+      fallbackCopy();
+    }
+  }
+
+  /**
    * Decode URI component safely
    * @param {string} str - String to decode
    * @returns {string} Decoded string
@@ -416,6 +460,17 @@
           link.appendChild(indicator);
         }
       });
+
+      // Add copy column header
+      const copyHeader = document.createElement('th');
+      copyHeader.className = 'indexcolcopy';
+      copyHeader.setAttribute('scope', 'col');
+      copyHeader.setAttribute('aria-label', 'Copy URL');
+      const copyHeaderText = document.createElement('span');
+      copyHeaderText.className = 'visually-hidden';
+      copyHeaderText.textContent = 'Copy URL';
+      copyHeader.appendChild(copyHeaderText);
+      headerRow.appendChild(copyHeader);
     },
 
     enhanceRows() {
@@ -459,6 +514,37 @@
         // Add data attributes for accessibility
         row.setAttribute('data-name', escapeHtml(data.displayName));
         row.setAttribute('data-type', data.isDirectory ? 'directory' : 'file');
+
+        // Add copy URL button cell (skip parent directory)
+        if (!data.isParent) {
+          const copyCell = document.createElement('td');
+          copyCell.className = 'indexcolcopy';
+
+          const copyButton = document.createElement('button');
+          copyButton.type = 'button';
+          copyButton.className = 'copy-url-btn';
+          copyButton.setAttribute('aria-label', `Copy URL for ${data.displayName}`);
+          copyButton.setAttribute('title', 'Copy URL to clipboard');
+          copyButton.innerHTML = `
+            <svg class="copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+            <svg class="copied-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          `;
+
+          copyButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const url = new URL(data.href, window.location.href).href;
+            copyToClipboard(url, copyButton);
+          });
+
+          copyCell.appendChild(copyButton);
+          row.appendChild(copyCell);
+        }
       });
     },
 
