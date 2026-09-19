@@ -48,9 +48,33 @@ The current build includes:
 - **Create movie playlist** - A menu action that collects movie links from the current
   directory and downloads `playlist.m3u` in M3U format. Supported extensions include
   `.avi`, `.flv`, `.m4v`, `.mkv`, `.mov`, `.mp4`, `.mpeg`, `.ts`, `.webm`, and `.wmv`.
+- **File size and directory refresh** - Updates sparse-file display using the PHP size
+  endpoint and reloads the listing when the Apache directory contents change.
 
 Playlist files are generated entirely in the browser; Apache does not need write access to
 the directory. The generated entries use absolute URLs resolved from the current page.
+
+### Plugin directory layout
+
+Each plugin lives in its own directory and contains its implementation alongside any
+plugin-specific assets:
+
+```text
+plugins/
+├── copy-file-url/
+│   ├── plugin.js
+│   └── plugin.css
+├── create-playlist/
+│   └── plugin.js
+└── file-size-refresh/
+    ├── plugin.js
+    └── file-size.php
+```
+
+The core loader reads `CONFIG.plugins.list`, loads the matching `plugin.js` and optional
+`plugin.css`, and initializes each enabled plugin. The plugin list is code-only; visitors
+never see which plugin files are installed. Plugins with `listed: false` run automatically
+but do not appear in the puzzle-button menu.
 
 ### Performance
 - **Fast Initial Render** - Critical CSS inlined, deferred JS
@@ -159,15 +183,28 @@ const CONFIG = {
     name: 'Application',
   },
   plugins: {
-    enabled: true,             // Hide the plugin button and inline actions when false
+    enabled: true,             // Disable all plugin loading and UI when false
+    path: '/fancy-index/plugins/',
+    list: [
+      'copy-file-url',
+      'create-playlist',
+      'file-size-refresh',
+    ],
   },
+  directoryRefreshInterval: 5000,
+  downloadSizeRefreshInterval: 5000,
+  fileSizeEndpoint: '/fancy-index/plugins/file-size-refresh/file-size.php',
   // ...
 };
 ```
 
-Individual plugins can be enabled or disabled in the plugin registration code. A plugin
-with `listed: false` remains an inline enhancement and is not shown in the puzzle-button
-menu. Script plugins with `enabled: true` are listed automatically.
+Remove a plugin name from `CONFIG.plugins.list` to disable it. Individual plugins can also
+set `enabled: false` in their `plugin.js` registration. A plugin with `listed: false`
+remains an automatic or inline enhancement and is not shown in the puzzle-button menu.
+
+The file-size plugin requires PHP support and the `file-size.php` endpoint to be executable
+by Apache. It validates the same-origin referrer, rejects path traversal, and only reports
+files from the directory that initiated the request.
 
 ### Custom Icons
 
