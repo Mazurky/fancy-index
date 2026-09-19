@@ -20,6 +20,10 @@
     themeStorageKey: 'fancy-index-theme',
     // Search debounce delay (ms)
     searchDebounceDelay: 150,
+    // Plugin polling and file-size endpoint settings
+    directoryRefreshInterval: 5000,
+    downloadSizeRefreshInterval: 5000,
+    fileSizeEndpoint: '/fancy-index/plugins/file-size-refresh/file-size.php',
     // Virtual scroll threshold (number of rows)
     virtualScrollThreshold: 1000,
     // Date format options
@@ -38,7 +42,7 @@
     plugins: {
       enabled: true,
       path: '/fancy-index/plugins/',
-      list: ['copy-file-url', 'create-playlist'],
+      list: ['copy-file-url', 'create-playlist', 'file-size-refresh'],
     },
   };
 
