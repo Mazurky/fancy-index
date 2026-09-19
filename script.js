@@ -35,6 +35,9 @@
       icon: 'external', // 'download', 'external', 'grid', or 'custom'
       openInNewTab: true,
     },
+    plugins: {
+      enabled: true,
+    },
   };
 
   // ==========================================================================
@@ -1134,6 +1137,99 @@
   // Page Header
   // ==========================================================================
 
+  // ==========================================================================
+  // Plugins
+  // ==========================================================================
+
+  const PluginManager = {
+    registry: [],
+    menu: null,
+
+    register(plugin) {
+      if (!plugin?.id || typeof plugin.run !== 'function') return;
+      this.registry.push({ enabled: true, listed: true, ...plugin });
+    },
+
+    createToolbarButton() {
+      if (!CONFIG.plugins?.enabled) return null;
+
+      const wrapper = document.createElement('div');
+      wrapper.className = 'plugins-control';
+
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'plugins-toggle';
+      button.setAttribute('aria-label', 'Open plugins');
+      button.setAttribute('aria-expanded', 'false');
+      button.title = 'Plugins';
+      button.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M9 3v2a2 2 0 0 1-2 2H5a2 2 0 0 0 0 4h2a2 2 0 0 1 2 2v2"/>
+          <path d="M15 3v2a2 2 0 0 0 2 2h2a2 2 0 0 1 0 4h-2a2 2 0 0 0-2 2v2"/>
+          <path d="M3 9h18M3 15h18"/>
+        </svg>
+      `;
+
+      this.menu = document.createElement('div');
+      this.menu.className = 'plugins-menu';
+      this.menu.hidden = true;
+      this.menu.setAttribute('role', 'menu');
+      this.renderMenu();
+
+      button.addEventListener('click', () => {
+        const isOpen = !this.menu.hidden;
+        this.menu.hidden = isOpen;
+        button.setAttribute('aria-expanded', String(!isOpen));
+      });
+
+      document.addEventListener('click', event => {
+        if (!wrapper.contains(event.target)) {
+          this.menu.hidden = true;
+          button.setAttribute('aria-expanded', 'false');
+        }
+      });
+      document.addEventListener('keydown', event => {
+        if (event.key === 'Escape') {
+          this.menu.hidden = true;
+          button.setAttribute('aria-expanded', 'false');
+        }
+      });
+
+      wrapper.append(button, this.menu);
+      return wrapper;
+    },
+
+    renderMenu() {
+      if (!this.menu) return;
+      this.menu.replaceChildren();
+      const listedPlugins = this.registry.filter(plugin => plugin.enabled && plugin.listed !== false);
+      if (!listedPlugins.length) {
+        const empty = document.createElement('span');
+        empty.className = 'plugins-empty';
+        empty.textContent = 'No plugins enabled';
+        this.menu.appendChild(empty);
+        return;
+      }
+
+      listedPlugins.forEach(plugin => {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'plugin-menu-item';
+        item.setAttribute('role', 'menuitem');
+        item.textContent = plugin.name;
+        item.addEventListener('click', async () => {
+          try {
+            await plugin.run();
+          } catch (error) {
+            console.error(`Fancy Index plugin failed: ${plugin.id}`, error);
+          }
+          this.menu.hidden = true;
+        });
+        this.menu.appendChild(item);
+      });
+    },
+  };
+
   const PageHeader = {
     create() {
       let path = window.location.pathname.replace(/\/$/g, '');
@@ -1162,6 +1258,10 @@
       
       // Search
       controls.appendChild(SearchComponent.createSearchUI());
+
+      // Plugins
+      const pluginsButton = PluginManager.createToolbarButton();
+      if (pluginsButton) controls.appendChild(pluginsButton);
       
       // External app link
       if (CONFIG.externalApp?.enabled) {
