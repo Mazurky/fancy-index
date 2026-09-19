@@ -37,6 +37,8 @@
     },
     plugins: {
       enabled: true,
+      path: '/fancy-index/plugins/',
+      list: ['copy-file-url', 'create-playlist'],
     },
   };
 
@@ -1146,8 +1148,44 @@
     menu: null,
 
     register(plugin) {
-      if (!plugin?.id || typeof plugin.run !== 'function') return;
+      if (!plugin?.id || (!plugin.init && !plugin.run)) return;
+      if (!CONFIG.plugins.list.includes(plugin.id)) return;
       this.registry.push({ enabled: true, listed: true, ...plugin });
+    },
+
+    loadConfigured() {
+      if (!CONFIG.plugins?.enabled) return Promise.resolve();
+      const names = Array.isArray(CONFIG.plugins.list) ? CONFIG.plugins.list : [];
+      return Promise.all(names.map(name => new Promise(resolve => {
+        const script = document.createElement('script');
+        script.src = `${CONFIG.plugins.path}${encodeURIComponent(name)}/plugin.js`;
+        script.async = false;
+        const stylesheet = document.createElement('link');
+        stylesheet.rel = 'stylesheet';
+        stylesheet.href = `${CONFIG.plugins.path}${encodeURIComponent(name)}/plugin.css`;
+        document.head.appendChild(stylesheet);
+        script.onload = resolve;
+        script.onerror = () => {
+          console.warn(`Fancy Index: Unable to load plugin "${name}"`);
+          resolve();
+        };
+        document.head.appendChild(script);
+      })));
+    },
+
+    async initialize() {
+      const api = { config: CONFIG, tableEnhancer: TableEnhancer, formatBytes };
+      for (const plugin of this.registry) {
+        if (plugin.enabled && typeof plugin.init === 'function') await plugin.init(api);
+      }
+    },
+
+    run(plugin) {
+      return typeof plugin.run === 'function' ? plugin.run({
+        config: CONFIG,
+        tableEnhancer: TableEnhancer,
+        formatBytes,
+      }) : undefined;
     },
 
     createToolbarButton() {
@@ -1219,7 +1257,7 @@
         item.textContent = plugin.name;
         item.addEventListener('click', async () => {
           try {
-            await plugin.run();
+            await this.run(plugin);
           } catch (error) {
             console.error(`Fancy Index plugin failed: ${plugin.id}`, error);
           }
@@ -1230,6 +1268,9 @@
     },
   };
 
+  /* Legacy in-bundle plugins retained only as migration reference. The active
+     implementations are loaded from plugins/<plugin-name>/plugin.js. */
+  /*
   const CopyLinkPlugin = {
     id: 'copy-file-url',
     name: 'Copy file URL',
@@ -1358,6 +1399,10 @@
     },
   };
   PluginManager.register(CreatePlaylistPlugin);
+  */
+
+  window.FancyIndex = window.FancyIndex || {};
+  window.FancyIndex.registerPlugin = plugin => PluginManager.register(plugin);
 
   const PageHeader = {
     create() {
@@ -1479,9 +1524,12 @@
   // Initialization
   // ==========================================================================
 
-  function init() {
+  async function init() {
     // Initialize theme first
     ThemeManager.init();
+
+    // Load only the plugins named in CONFIG.plugins.list.
+    await PluginManager.loadConfigured();
     
     // Enhance table structure
     if (!TableEnhancer.init()) {
@@ -1489,8 +1537,8 @@
       return;
     }
 
-    // Inline plugin: add a copy action to every file row.
-    CopyLinkPlugin.init();
+    // Initialize loaded plugins after the table has been normalized.
+    await PluginManager.initialize();
     
     // Create and insert header
     const header = PageHeader.create();
