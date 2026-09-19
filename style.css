@@ -978,6 +978,52 @@ tbody td {
   vertical-align: middle;
 }
 
+.plugin-copy-column {
+  width: 1%;
+  text-align: center;
+  white-space: nowrap;
+}
+
+thead .plugin-copy-column {
+  text-align: center;
+}
+
+.copy-file-url {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.copy-file-url:hover,
+.copy-file-url:focus-visible {
+  border-color: var(--color-border);
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+}
+
+.copy-file-url:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.copy-file-url svg {
+  width: 16px;
+  height: 16px;
+}
+
+.copy-file-url.copied {
+  color: var(--color-accent-primary);
+}
+
 /* Name Column */
 .indexcolname {
   min-width: 200px;
