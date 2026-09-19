@@ -35,6 +35,9 @@
       icon: 'external', // 'download', 'external', 'grid', or 'custom'
       openInNewTab: true,
     },
+    plugins: {
+      enabled: true,
+    },
   };
 
   // ==========================================================================
@@ -1134,6 +1137,228 @@
   // Page Header
   // ==========================================================================
 
+  // ==========================================================================
+  // Plugins
+  // ==========================================================================
+
+  const PluginManager = {
+    registry: [],
+    menu: null,
+
+    register(plugin) {
+      if (!plugin?.id || typeof plugin.run !== 'function') return;
+      this.registry.push({ enabled: true, listed: true, ...plugin });
+    },
+
+    createToolbarButton() {
+      if (!CONFIG.plugins?.enabled) return null;
+
+      const wrapper = document.createElement('div');
+      wrapper.className = 'plugins-control';
+
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'plugins-toggle';
+      button.setAttribute('aria-label', 'Open plugins');
+      button.setAttribute('aria-expanded', 'false');
+      button.title = 'Plugins';
+      button.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M9 3v2a2 2 0 0 1-2 2H5a2 2 0 0 0 0 4h2a2 2 0 0 1 2 2v2"/>
+          <path d="M15 3v2a2 2 0 0 0 2 2h2a2 2 0 0 1 0 4h-2a2 2 0 0 0-2 2v2"/>
+          <path d="M3 9h18M3 15h18"/>
+        </svg>
+      `;
+
+      this.menu = document.createElement('div');
+      this.menu.className = 'plugins-menu';
+      this.menu.hidden = true;
+      this.menu.setAttribute('role', 'menu');
+      this.renderMenu();
+
+      button.addEventListener('click', () => {
+        const isOpen = !this.menu.hidden;
+        this.menu.hidden = isOpen;
+        button.setAttribute('aria-expanded', String(!isOpen));
+      });
+
+      document.addEventListener('click', event => {
+        if (!wrapper.contains(event.target)) {
+          this.menu.hidden = true;
+          button.setAttribute('aria-expanded', 'false');
+        }
+      });
+      document.addEventListener('keydown', event => {
+        if (event.key === 'Escape') {
+          this.menu.hidden = true;
+          button.setAttribute('aria-expanded', 'false');
+        }
+      });
+
+      wrapper.append(button, this.menu);
+      return wrapper;
+    },
+
+    renderMenu() {
+      if (!this.menu) return;
+      this.menu.replaceChildren();
+      const listedPlugins = this.registry.filter(plugin => plugin.enabled && plugin.listed !== false);
+      if (!listedPlugins.length) {
+        const empty = document.createElement('span');
+        empty.className = 'plugins-empty';
+        empty.textContent = 'No plugins enabled';
+        this.menu.appendChild(empty);
+        return;
+      }
+
+      listedPlugins.forEach(plugin => {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'plugin-menu-item';
+        item.setAttribute('role', 'menuitem');
+        item.textContent = plugin.name;
+        item.addEventListener('click', async () => {
+          try {
+            await plugin.run();
+          } catch (error) {
+            console.error(`Fancy Index plugin failed: ${plugin.id}`, error);
+          }
+          this.menu.hidden = true;
+        });
+        this.menu.appendChild(item);
+      });
+    },
+  };
+
+  const CopyLinkPlugin = {
+    id: 'copy-file-url',
+    name: 'Copy file URL',
+    listed: false,
+
+    init() {
+      if (!CONFIG.plugins?.enabled || document.querySelector('.plugin-copy-column')) return;
+      const headerRow = TableEnhancer.thead?.querySelector('tr');
+      if (!headerRow) return;
+
+      const header = document.createElement('th');
+      header.className = 'plugin-copy-column';
+      header.scope = 'col';
+      header.textContent = 'Copy';
+      headerRow.appendChild(header);
+
+      TableEnhancer.rowData.forEach(data => {
+        const cell = document.createElement('td');
+        cell.className = 'plugin-copy-column';
+        if (data.isFile) {
+          const link = data.element.querySelector(CONFIG.selectors.nameColumn)?.querySelector('a');
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'copy-file-url';
+          button.title = 'Copy full file URL';
+          button.setAttribute('aria-label', `Copy URL for ${data.displayName}`);
+          button.innerHTML = `
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+          `;
+          button.addEventListener('click', async () => {
+            if (!link) return;
+            const url = new URL(link.getAttribute('href'), window.location.href).href;
+            const copied = await this.copyText(url);
+            button.classList.toggle('copied', copied);
+            button.title = copied ? 'Copied!' : 'Copy failed';
+            if (copied) window.setTimeout(() => {
+              button.classList.remove('copied');
+              button.title = 'Copy full file URL';
+            }, 1500);
+          });
+          cell.appendChild(button);
+        }
+        data.element.appendChild(cell);
+      });
+    },
+
+    async copyText(value) {
+      try {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(value);
+          return true;
+        }
+      } catch (error) {
+        // Fall through to the selection-based fallback for older/mobile browsers.
+      }
+
+      const textarea = document.createElement('textarea');
+      textarea.value = value;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      textarea.setSelectionRange(0, textarea.value.length);
+      let copied = false;
+      try {
+        copied = document.execCommand('copy');
+      } catch (error) {
+        copied = false;
+      }
+      textarea.remove();
+      return copied;
+    },
+  };
+  PluginManager.register(CopyLinkPlugin);
+
+  const CreatePlaylistPlugin = {
+    id: 'create-playlist',
+    name: 'Create movie playlist',
+    enabled: true,
+
+    async run() {
+      const movieExtensions = /\.(avi|flv|m4v|mkv|mov|mp4|mpe?g|ts|webm|wmv)$/i;
+      const movies = TableEnhancer.rowData
+        .filter(data => data.isFile && movieExtensions.test(data.displayName))
+        .sort((a, b) => a.displayName.localeCompare(b.displayName, undefined, { numeric: true, sensitivity: 'base' }));
+
+      if (!movies.length) {
+        window.alert('No movie files found in this folder.');
+        return;
+      }
+
+      const entries = movies.flatMap(data => {
+        const link = data.element.querySelector(CONFIG.selectors.nameColumn)?.querySelector('a');
+        if (!link) return [];
+        const url = new URL(link.getAttribute('href'), window.location.href).href;
+        return [`#EXTINF:-1,${this.displayTitle(data.displayName)}`, url];
+      });
+      const playlist = `#EXTM3U\n${entries.join('\n')}\n`;
+      this.download(playlist, 'playlist.m3u');
+    },
+
+    displayTitle(filename) {
+      const title = filename.replace(/\.[^.]+$/, '');
+      const season = title.match(/\bS(\d{1,2})\b/i);
+      const episode = title.match(/\bEpisode\s*[-._ ]?\s*(\d{1,3})\b/i);
+      if (!season || !episode) return title;
+      const episodeNumber = episode[1].padStart(2, '0');
+      return `S${season[1].padStart(2, '0')}E${episodeNumber} - Episode ${episodeNumber}`;
+    },
+
+    download(contents, filename) {
+      const blob = new Blob([contents], { type: 'audio/x-mpegurl;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    },
+  };
+  PluginManager.register(CreatePlaylistPlugin);
+
   const PageHeader = {
     create() {
       let path = window.location.pathname.replace(/\/$/g, '');
@@ -1162,6 +1387,10 @@
       
       // Search
       controls.appendChild(SearchComponent.createSearchUI());
+
+      // Plugins
+      const pluginsButton = PluginManager.createToolbarButton();
+      if (pluginsButton) controls.appendChild(pluginsButton);
       
       // External app link
       if (CONFIG.externalApp?.enabled) {
@@ -1259,6 +1488,9 @@
       console.warn('Fancy Index: No table found');
       return;
     }
+
+    // Inline plugin: add a copy action to every file row.
+    CopyLinkPlugin.init();
     
     // Create and insert header
     const header = PageHeader.create();
