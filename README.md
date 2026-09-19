@@ -9,6 +9,9 @@
 > - Keyboard navigation
 > - Breadcrumb navigation
 > - Statistics bar
+> - Code-configured plugin system
+> - File URL copy actions
+> - Browser-generated movie playlists
 > - Modern CSS with design tokens
 
 Transform the default Apache directory index from boring and dated to sleek and professional.
@@ -28,6 +31,26 @@ Transform the default Apache directory index from boring and dated to sleek and 
 - **Breadcrumb Navigation** - Easy path traversal
 - **Statistics Bar** - Shows file/folder counts and total size
 - **Smart Sorting** - Version-aware natural sorting
+- **Copy File URL** - Copies the absolute URL for each file to the clipboard
+- **Movie Playlists** - Generates and downloads an `.m3u` playlist for movies in the current folder
+
+### Plugins
+
+Plugins are controlled in code and are never exposed as an installation or administration
+screen to visitors. Enabled script plugins appear behind the puzzle button beside deep
+search. Inline plugins can extend the directory table without appearing in that menu.
+
+The current build includes:
+
+- **Copy file URL** - An inline action with its own table column. It uses the modern
+  Clipboard API and a selection-based fallback for older iOS, Android, Windows, and Linux
+  browsers.
+- **Create movie playlist** - A menu action that collects movie links from the current
+  directory and downloads `playlist.m3u` in M3U format. Supported extensions include
+  `.avi`, `.flv`, `.m4v`, `.mkv`, `.mov`, `.mp4`, `.mpeg`, `.ts`, `.webm`, and `.wmv`.
+
+Playlist files are generated entirely in the browser; Apache does not need write access to
+the directory. The generated entries use absolute URLs resolved from the current page.
 
 ### Performance
 - **Fast Initial Render** - Critical CSS inlined, deferred JS
@@ -130,9 +153,21 @@ const CONFIG = {
     absoluteFallbackDays: 30,  // Show absolute date after this many days
   },
   searchDebounceDelay: 150,  // Search delay in ms
+  externalApp: {
+    enabled: true,
+    url: '/app/',
+    name: 'Application',
+  },
+  plugins: {
+    enabled: true,             // Hide the plugin button and inline actions when false
+  },
   // ...
 };
 ```
+
+Individual plugins can be enabled or disabled in the plugin registration code. A plugin
+with `listed: false` remains an inline enhancement and is not shown in the puzzle-button
+menu. Script plugins with `enabled: true` are listed automatically.
 
 ### Custom Icons
 
@@ -157,15 +192,20 @@ AddDescription "Your file type" .yourext
 | `Escape` | Clear search |
 | `Tab` | Exit search to file list |
 
+When the plugin menu is open, `Escape` closes it. The puzzle button shows only plugins that
+are enabled in `script.js`.
+
 ## Browser Support
 
 - Chrome 90+
 - Firefox 88+
-- Safari 14+
+- Safari 14+ (including iOS Safari)
 - Edge 90+
 - Opera 76+
 
-Graceful degradation for older browsers (no JavaScript features).
+The copy action falls back to a selection-based copy command when `navigator.clipboard` is
+not available. Older browsers still receive the Apache directory listing and graceful
+degradation without JavaScript enhancements.
 
 ## Apache Module Requirements
 
