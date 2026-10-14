@@ -20,9 +20,7 @@
     themeStorageKey: 'fancy-index-theme',
     // Search debounce delay (ms)
     searchDebounceDelay: 150,
-    // Plugin polling and file-size endpoint settings
-    directoryRefreshInterval: 5000,
-    downloadSizeRefreshInterval: 5000,
+    // File-size endpoint
     fileSizeEndpoint: '/fancy-index/plugins/file-size-refresh/file-size.php',
     // Date format options
     dateFormatOptions: {
@@ -1222,7 +1220,7 @@
       const names = Array.isArray(CONFIG.plugins.list) ? CONFIG.plugins.list : [];
       return Promise.all(names.map(name => new Promise(resolve => {
         const script = document.createElement('script');
-        script.src = `${CONFIG.plugins.path}${encodeURIComponent(name)}/plugin.js?v=20261014`;
+        script.src = `${CONFIG.plugins.path}${encodeURIComponent(name)}/plugin.js?v=20261014.1`;
         script.async = false;
         const stylesheet = document.createElement('link');
         stylesheet.rel = 'stylesheet';
