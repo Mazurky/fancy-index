@@ -10,6 +10,10 @@
   <link rel="stylesheet" href="/fancy-index/style.css">
   <!-- Critical styles for no-JS and fast initial render -->
   <style>
+    html { background: var(--color-bg-primary, #f0f0f2); }
+    html[data-theme="dark"] { background: var(--color-bg-primary, #09090b); }
+    html.js:not([data-ready]) body { visibility: hidden; }
+
     /* SVG icons base size */
     img[src$=".svg"] {
       width: 18px;
@@ -30,6 +34,10 @@
     (function () {
       document.documentElement.classList.remove('no-js');
       document.documentElement.classList.add('js');
+      // Keep the listing usable if the main script cannot initialize.
+      window.setTimeout(function () {
+        document.documentElement.setAttribute('data-ready', '');
+      }, 10000);
       // Restore saved theme preference
       try {
         var savedTheme = localStorage.getItem('fancy-index-theme');

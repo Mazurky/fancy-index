@@ -1458,17 +1458,11 @@
     // Initialize theme first
     ThemeManager.init();
 
-    // Load only the plugins named in CONFIG.plugins.list.
-    await PluginManager.loadConfigured();
-
     // Enhance table structure
     if (!TableEnhancer.init()) {
       console.warn('Fancy Index: No table found');
       return;
     }
-
-    // Initialize loaded plugins after the table has been normalized.
-    await PluginManager.initialize();
 
     // Create and insert header
     const header = PageHeader.create();
@@ -1496,14 +1490,24 @@
     // Mark document as ready
     document.documentElement.setAttribute('data-ready', '');
 
+    // Optional plugins must not delay the first finished layout.
+    await PluginManager.loadConfigured();
+    PluginManager.renderMenu();
+    await PluginManager.initialize();
+
     // Log info
     console.log('Fancy Index v2.0.0 initialized');
   }
 
   // Run on DOM ready
+  function start() {
+    init().catch(error => console.error('Fancy Index: Initialization failed', error))
+      .finally(() => document.documentElement.setAttribute('data-ready', ''));
+  }
+
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', start);
   } else {
-    init();
+    start();
   }
 })();
