@@ -1,6 +1,5 @@
 # Fancy Index
 
-[![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](https://github.com/TheClashFruit/fancyindex-apache)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > **Note:** This is a fork of the original [fancy-index](https://github.com/glen-cheney/fancy-index) by Glen Cheney. This version has been completely modernized with the help of AI to feature a sleek 2026 aesthetic, improved accessibility, and new functionality including:

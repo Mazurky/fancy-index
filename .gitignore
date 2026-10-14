@@ -1,3 +1,6 @@
 .DS_store
 .tests
 tests
+/dist/
+/scripts/
+/.github/
