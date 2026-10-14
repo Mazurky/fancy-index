@@ -1494,9 +1494,6 @@
     await PluginManager.loadConfigured();
     PluginManager.renderMenu();
     await PluginManager.initialize();
-
-    // Log info
-    console.log('Fancy Index v2.0.0 initialized');
   }
 
   // Run on DOM ready
