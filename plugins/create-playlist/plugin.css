@@ -1,1 +1,229 @@
-/* This plugin uses the shared plugin-menu styles. */
+.playlist-dialog {
+  box-sizing: border-box;
+  width: min(44rem, calc(100% - 2rem));
+  max-width: none;
+  max-height: 90vh;
+  max-height: 90dvh;
+  margin: auto;
+  padding: 0;
+  overflow: auto;
+  color: var(--color-text-primary);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 1.75rem;
+  box-shadow: var(--shadow-lg);
+  font-family: -apple-system, BlinkMacSystemFont, var(--font-sans);
+  font-size: 1.0625rem;
+  line-height: 1.5;
+}
+
+.playlist-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.playlist-dialog::backdrop {
+  background: rgb(0 0 0 / 0.5);
+}
+
+.playlist-header {
+  padding-bottom: var(--space-4);
+}
+
+.playlist-dialog h2 {
+  margin: 0 0 var(--space-2);
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+}
+
+.playlist-dialog p {
+  margin: 0;
+}
+
+.playlist-header p,
+.playlist-status {
+  color: var(--color-text-secondary);
+  font-size: 0.9375rem;
+}
+
+.playlist-body {
+  min-height: 0;
+  padding: var(--space-6);
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.playlist-dialog .playlist-status {
+  margin-bottom: var(--space-3);
+}
+
+.playlist-selection {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.playlist-movies {
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: playlist-order;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+}
+
+.playlist-movies:empty {
+  display: none;
+}
+
+.playlist-movies li {
+  display: grid;
+  grid-template-columns: 1.5rem minmax(0, 1fr) auto auto;
+  gap: var(--space-2);
+  align-items: center;
+  padding: var(--space-3);
+  counter-increment: playlist-order;
+}
+
+.playlist-movies li+li {
+  border-top: 1px solid var(--color-border);
+}
+
+.playlist-movies li::before {
+  content: counter(playlist-order);
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.playlist-movies label {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  min-width: 0;
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.playlist-movies span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.playlist-movies input {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  accent-color: var(--color-link);
+}
+
+.playlist-dialog button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  color: var(--color-link);
+  background: var(--color-bg-tertiary);
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.playlist-actions {
+  display: flex;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  gap: var(--space-3);
+  justify-content: flex-end;
+  padding: var(--space-4) var(--space-6);
+  background: var(--color-bg-elevated);
+  border-top: 1px solid var(--color-border);
+}
+
+.playlist-dialog [data-action="download"] {
+  color: var(--color-bg-elevated);
+  background: var(--color-link);
+  padding-inline: var(--space-5);
+}
+
+@media (hover: hover) {
+  .playlist-dialog button:hover:not(:disabled) {
+    border-color: currentColor;
+  }
+
+  .playlist-dialog [data-action="download"]:hover:not(:disabled) {
+    background: var(--color-link-hover);
+  }
+}
+
+.playlist-dialog button:active:not(:disabled) {
+  opacity: 0.8;
+}
+
+.playlist-dialog button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.playlist-dialog button:focus-visible,
+.playlist-dialog input:focus-visible {
+  outline: 2px solid var(--color-link);
+  outline-offset: 3px;
+}
+
+@media (max-width: 40rem) {
+  .playlist-dialog {
+    width: 100%;
+    margin: auto 0 0;
+    border-radius: 1.75rem 1.75rem 0 0;
+    border-bottom: 0;
+  }
+
+  .playlist-body,
+  .playlist-actions {
+    padding-left: max(var(--space-4), env(safe-area-inset-left));
+    padding-right: max(var(--space-4), env(safe-area-inset-right));
+  }
+
+  .playlist-movies li {
+    grid-template-columns: 1.5rem minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .playlist-movies label {
+    grid-column: 2 / -1;
+  }
+
+  .playlist-movies button:first-of-type {
+    grid-column: 2;
+  }
+
+  .playlist-actions {
+    padding-bottom: max(var(--space-4), env(safe-area-inset-bottom));
+  }
+
+  .playlist-actions button {
+    flex: 1 1 auto;
+  }
+}
+
+@media (forced-colors: active) {
+  .playlist-dialog button {
+    border-color: ButtonText;
+  }
+
+  .playlist-dialog button:disabled {
+    color: GrayText;
+    opacity: 1;
+  }
+}

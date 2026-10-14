@@ -1,4 +1,4 @@
-(function() {
+(function () {
   'use strict';
 
   // ==========================================================================
@@ -24,11 +24,9 @@
     directoryRefreshInterval: 5000,
     downloadSizeRefreshInterval: 5000,
     fileSizeEndpoint: '/fancy-index/plugins/file-size-refresh/file-size.php',
-    // Virtual scroll threshold (number of rows)
-    virtualScrollThreshold: 1000,
     // Date format options
     dateFormatOptions: {
-      relative: true,
+      relative: false,
       absoluteFallbackDays: 30, // Show absolute date after this many days
     },
     // External app link (set to null to disable)
@@ -113,11 +111,11 @@
   function formatBytes(bytes) {
     if (bytes === 0) return '0 B';
     if (bytes === '-' || isNaN(bytes)) return '-';
-    
+
     const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
     const i = Math.floor(Math.log(bytes) / Math.log(1024));
     const size = (bytes / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0);
-    
+
     return `${size} ${units[i]}`;
   }
 
@@ -128,9 +126,9 @@
    */
   function parseApacheDate(str) {
     if (!str || str === '-') return null;
-    
+
     const trimmed = str.trim();
-    
+
     // Try ISO format first (Apache 2.4+)
     const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2})(?::(\d{2}))?$/);
     if (isoMatch) {
@@ -144,7 +142,7 @@
         parseInt(second, 10)
       );
     }
-    
+
     // Try older formats
     const date = new Date(trimmed);
     return isNaN(date.getTime()) ? null : date;
@@ -157,7 +155,7 @@
    */
   function getRelativeTimeArgs(seconds) {
     const abs = Math.abs(seconds);
-    
+
     const units = [
       { unit: 'year', seconds: 60 * 60 * 24 * 365 },
       { unit: 'month', seconds: 60 * 60 * 24 * 30 },
@@ -167,13 +165,13 @@
       { unit: 'minute', seconds: 60 },
       { unit: 'second', seconds: 1 },
     ];
-    
+
     for (const { unit, seconds: unitSeconds } of units) {
       if (abs >= unitSeconds) {
         return { value: Math.round(seconds / unitSeconds), unit };
       }
     }
-    
+
     return { value: seconds, unit: 'second' };
   }
 
@@ -185,11 +183,11 @@
    */
   function formatDate(date, useRelative = true) {
     if (!date) return '-';
-    
+
     const now = Date.now();
     const diffSeconds = Math.round((date.getTime() - now) / 1000);
     const absDays = Math.abs(diffSeconds) / (60 * 60 * 24);
-    
+
     // Use relative format for recent dates
     if (useRelative && 'RelativeTimeFormat' in Intl && absDays <= CONFIG.dateFormatOptions.absoluteFallbackDays) {
       try {
@@ -200,7 +198,7 @@
         // Fall through to absolute format
       }
     }
-    
+
     // Absolute format for older dates
     try {
       return new Intl.DateTimeFormat(undefined, {
@@ -225,16 +223,17 @@
 
     init() {
       // Get saved theme or default to light
-      const saved = localStorage.getItem(CONFIG.themeStorageKey);
+      let saved;
+      try { saved = localStorage.getItem(CONFIG.themeStorageKey); } catch (error) { /* Theme persistence is optional. */ }
       this.currentTheme = this.themes.includes(saved) ? saved : 'light';
       this.apply(this.currentTheme);
     },
 
     apply(theme) {
       document.documentElement.setAttribute('data-theme', theme);
-      localStorage.setItem(CONFIG.themeStorageKey, theme);
+      try { localStorage.setItem(CONFIG.themeStorageKey, theme); } catch (error) { /* Theme persistence is optional. */ }
       this.currentTheme = theme;
-      
+
       // Update toggle button aria-label
       const toggle = document.getElementById('theme-toggle');
       if (toggle) {
@@ -266,9 +265,9 @@
           <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
         </svg>
       `;
-      
+
       button.addEventListener('click', () => this.toggle());
-      
+
       return button;
     },
   };
@@ -289,14 +288,17 @@
     init() {
       this.table = document.querySelector(CONFIG.selectors.table);
       if (!this.table) return false;
-      
+
       this.restructureTable();
       this.extractRowData();
       this.addTableWrapper();
       this.enhanceHeaders();
       this.enhanceRows();
       this.formatDates();
-      
+      const params = new URLSearchParams(window.location.search.replace(/;/g, '&'));
+      const column = params.get('C');
+      this.sort(['N', 'M', 'S', 'D'].includes(column) ? column : 'N', params.get('O') === 'D' ? 'desc' : 'asc');
+
       return true;
     },
 
@@ -337,36 +339,36 @@
 
     extractRowData() {
       const rows = Array.from(this.tbody.querySelectorAll('tr'));
-      
+
       this.rowData = rows.map((row, index) => {
         const nameCell = row.querySelector(CONFIG.selectors.nameColumn);
         const sizeCell = row.querySelector(CONFIG.selectors.sizeColumn);
         const dateCell = row.querySelector(CONFIG.selectors.lastModColumn);
         const descCell = row.querySelector(CONFIG.selectors.descColumn);
-        
+
         const link = nameCell?.querySelector('a');
         const name = link?.textContent?.trim() || '';
         const href = link?.getAttribute('href') || '';
-        
+
         // Determine entry type
         const isParent = name === 'Parent Directory' || href === '../';
         const isDirectory = href.endsWith('/') && !isParent;
-        
+
         // Parse size
         const sizeText = sizeCell?.textContent?.trim() || '-';
         let sizeBytes = 0;
         if (sizeText !== '-') {
           const match = sizeText.match(/^([\d.]+)\s*([KMGTP]?)i?B?$/i);
           if (match) {
-            const multipliers = { '': 1, K: 1024, M: 1024**2, G: 1024**3, T: 1024**4, P: 1024**5 };
+            const multipliers = { '': 1, K: 1024, M: 1024 ** 2, G: 1024 ** 3, T: 1024 ** 4, P: 1024 ** 5 };
             sizeBytes = parseFloat(match[1]) * (multipliers[match[2].toUpperCase()] || 1);
           }
         }
-        
+
         // Parse date
         const dateText = dateCell?.textContent?.trim() || '';
         const date = parseApacheDate(dateText);
-        
+
         return {
           element: row,
           index,
@@ -384,7 +386,7 @@
           visible: true,
         };
       });
-      
+
       this.rows = rows;
     },
 
@@ -395,7 +397,7 @@
       wrapper.setAttribute('role', 'region');
       wrapper.setAttribute('aria-label', 'Directory listing');
       wrapper.setAttribute('tabindex', '0');
-      
+
       this.table.parentNode.insertBefore(wrapper, this.table);
       wrapper.appendChild(this.table);
     },
@@ -403,17 +405,32 @@
     enhanceHeaders() {
       const headerRow = this.thead.querySelector('tr');
       if (!headerRow) return;
-      
+
       // Remove the icon column header (first th with class indexcolicon)
       const iconHeader = headerRow.querySelector('th.indexcolicon');
       if (iconHeader) {
         iconHeader.remove();
       }
-      
+
       // Convert th elements with links to sortable columns
       headerRow.querySelectorAll('th').forEach(th => {
         const link = th.querySelector('a');
         if (link) {
+          const column = { indexcolname: 'N', indexcollastmod: 'M', indexcolsize: 'S', indexcoldesc: 'D' };
+          const key = Object.keys(column).find(className => th.classList.contains(className));
+          if (!key) return;
+          th.dataset.sortColumn = column[key];
+          link.addEventListener('click', event => {
+            if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+            event.preventDefault();
+            const direction = this.sortColumn === column[key] && this.sortDirection === 'asc' ? 'desc' : 'asc';
+            this.sort(column[key], direction);
+            const url = new URL(window.location.href);
+            url.search = url.search.replace(/;/g, '&');
+            url.searchParams.set('C', column[key]);
+            url.searchParams.set('O', direction === 'asc' ? 'A' : 'D');
+            window.history.replaceState(null, '', url);
+          });
           // Add sort indicator
           const indicator = document.createElement('span');
           indicator.className = 'sort-indicator';
@@ -427,10 +444,49 @@
       });
     },
 
+    sort(column, direction = this.sortDirection) {
+      this.sortColumn = column;
+      this.sortDirection = direction;
+      const compareText = (a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+      const sign = direction === 'desc' ? -1 : 1;
+      this.rowData.sort((a, b) => {
+        if (a.isParent !== b.isParent) return a.isParent ? -1 : 1;
+        if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1;
+        let result;
+        if (column === 'M') {
+          if (!!a.date !== !!b.date) return a.date ? -1 : 1;
+          result = (a.date?.getTime() || 0) - (b.date?.getTime() || 0);
+        } else if (column === 'S') {
+          result = a.sizeBytes - b.sizeBytes;
+        } else {
+          result = compareText(column === 'D' ? a.description : a.displayName, column === 'D' ? b.description : b.displayName);
+        }
+        return sign * result || compareText(a.displayName, b.displayName) || a.index - b.index;
+      });
+      this.rowData.forEach(data => this.tbody.appendChild(data.element));
+      this.rows = this.rowData.map(data => data.element);
+      let even = false;
+      this.rowData.forEach(data => {
+        if (data.visible && !data.isParent) {
+          data.element.classList.toggle('even', even);
+          even = !even;
+        }
+      });
+      this.thead.querySelectorAll('th[data-sort-column]').forEach(th => {
+        const active = th.dataset.sortColumn === column;
+        th.setAttribute('aria-sort', active ? (direction === 'asc' ? 'ascending' : 'descending') : 'none');
+        const indicator = th.querySelector('.sort-indicator');
+        indicator.classList.toggle('active', active);
+        indicator.querySelectorAll('svg').forEach((arrow, index) => {
+          arrow.style.opacity = active && index !== (direction === 'asc' ? 0 : 1) ? '0.2' : '';
+        });
+      });
+    },
+
     enhanceRows() {
       this.rowData.forEach(data => {
         const row = data.element;
-        
+
         // Add semantic classes
         if (data.isParent) {
           row.classList.add('is-parent');
@@ -439,12 +495,12 @@
         } else {
           row.classList.add('is-file');
         }
-        
+
         // Restructure icon column
         const cells = Array.from(row.children);
         const iconCell = cells[0];
         const nameCell = cells[1];
-        
+
         if (iconCell && nameCell && iconCell !== nameCell) {
           const img = iconCell.querySelector('img');
           if (img) {
@@ -452,7 +508,7 @@
             const iconWrapper = document.createElement('span');
             iconWrapper.className = 'icon-wrapper';
             iconWrapper.appendChild(img.cloneNode(true));
-            
+
             // Insert before link in name cell
             const link = nameCell.querySelector('a');
             if (link) {
@@ -460,11 +516,11 @@
               link.insertBefore(iconWrapper, link.firstChild);
             }
           }
-          
+
           // Remove original icon cell
           iconCell.remove();
         }
-        
+
         // Add data attributes for accessibility
         row.setAttribute('data-name', escapeHtml(data.displayName));
         row.setAttribute('data-type', data.isDirectory ? 'directory' : 'file');
@@ -475,11 +531,11 @@
       this.rowData.forEach((data, index) => {
         // Skip parent directory
         if (data.isParent) return;
-        
+
         const dateCell = data.element.querySelector(CONFIG.selectors.lastModColumn);
         if (dateCell && data.date) {
           const formatted = formatDate(data.date, CONFIG.dateFormatOptions.relative);
-          
+
           // Store original date as title for tooltip
           dateCell.setAttribute('title', data.date.toLocaleString());
           dateCell.textContent = formatted;
@@ -490,7 +546,7 @@
     filter(query) {
       const normalizedQuery = query.toLowerCase().trim();
       let visibleCount = 0;
-      
+
       this.rowData.forEach((data, index) => {
         // Always show parent directory
         if (data.isParent) {
@@ -499,10 +555,10 @@
           visibleCount++;
           return;
         }
-        
+
         const matches = !normalizedQuery || data.name.includes(normalizedQuery);
         data.visible = matches;
-        
+
         if (matches) {
           data.element.classList.remove('hidden');
           visibleCount++;
@@ -510,7 +566,7 @@
           data.element.classList.add('hidden');
         }
       });
-      
+
       // Update even/odd styling
       let even = false;
       this.rowData.forEach(data => {
@@ -519,7 +575,7 @@
           even = !even;
         }
       });
-      
+
       return visibleCount;
     },
 
@@ -527,10 +583,10 @@
       let totalFiles = 0;
       let totalDirs = 0;
       let totalSize = 0;
-      
+
       this.rowData.forEach(data => {
         if (data.isParent) return;
-        
+
         if (data.isDirectory) {
           totalDirs++;
         } else {
@@ -538,7 +594,7 @@
           totalSize += data.sizeBytes;
         }
       });
-      
+
       return { totalFiles, totalDirs, totalSize };
     },
   };
@@ -560,7 +616,7 @@
       this.input = document.getElementById('search');
       this.resultsCount = document.getElementById('search-results-count');
       this.deepSearchToggle = document.getElementById('deep-search-toggle');
-      
+
       if (this.input) {
         this.bindEvents();
       }
@@ -570,7 +626,7 @@
       const container = document.createElement('div');
       container.id = 'search-container';
       container.className = 'js-only';
-      
+
       // Search icon
       const icon = document.createElement('span');
       icon.className = 'search-icon';
@@ -581,7 +637,7 @@
           <path d="M21 21l-4.35-4.35"/>
         </svg>
       `;
-      
+
       // Search input
       this.input = document.createElement('input');
       this.input.type = 'search';
@@ -592,7 +648,7 @@
       this.input.setAttribute('autocorrect', 'off');
       this.input.setAttribute('autocapitalize', 'off');
       this.input.setAttribute('spellcheck', 'false');
-      
+
       // Deep search toggle button
       this.deepSearchToggle = document.createElement('button');
       this.deepSearchToggle.type = 'button';
@@ -608,18 +664,18 @@
           <path d="M16 16l2 2"/>
         </svg>
       `;
-      
+
       // Results count
       this.resultsCount = document.createElement('span');
       this.resultsCount.id = 'search-results-count';
       this.resultsCount.setAttribute('aria-live', 'polite');
       this.resultsCount.setAttribute('aria-atomic', 'true');
-      
+
       container.appendChild(icon);
       container.appendChild(this.input);
       container.appendChild(this.deepSearchToggle);
       container.appendChild(this.resultsCount);
-      
+
       return container;
     },
 
@@ -633,11 +689,11 @@
           this.updateResultsCount(value, visibleCount);
         }
       }, CONFIG.searchDebounceDelay);
-      
+
       this.input.addEventListener('input', (e) => {
         handleSearch(e.target.value);
       });
-      
+
       // Clear on Escape and exit input
       this.input.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
@@ -659,7 +715,7 @@
           }
         }
       });
-      
+
       // Deep search toggle
       if (this.deepSearchToggle) {
         this.deepSearchToggle.addEventListener('click', () => {
@@ -672,10 +728,10 @@
       this.deepSearchActive = !this.deepSearchActive;
       this.deepSearchToggle.setAttribute('aria-pressed', this.deepSearchActive.toString());
       this.deepSearchToggle.classList.toggle('active', this.deepSearchActive);
-      
+
       // Update placeholder
       this.input.placeholder = this.deepSearchActive ? 'Deep search (min 2 chars)...' : 'Search files...';
-      
+
       // Re-run search if there's a query
       if (this.input.value) {
         if (this.deepSearchActive && this.input.value.length >= 2) {
@@ -693,34 +749,36 @@
       if (this.deepSearchAbortController) {
         this.deepSearchAbortController.abort();
       }
-      this.deepSearchAbortController = new AbortController();
-      
+      const controller = new AbortController();
+      this.deepSearchAbortController = controller;
+
       const normalizedQuery = query.toLowerCase().trim();
       this.deepSearchResults = [];
-      
+
       // Show loading state
       this.resultsCount.innerHTML = '<span class="deep-search-loading">Searching...</span>';
-      
+
       // First, filter current directory
       TableEnhancer.filter(query);
-      
+
       // Get all directories to search
       const directories = TableEnhancer.rowData
         .filter(d => d.isDirectory && !d.isParent)
         .map(d => ({ path: d.href, name: d.displayName }));
-      
+
       if (directories.length === 0) {
         this.updateResultsCount(query, TableEnhancer.rowData.filter(d => d.visible).length);
         return;
       }
-      
+
       // Crawl directories recursively
       const basePath = window.location.pathname;
       let totalFound = 0;
       let directoriesSearched = 0;
-      
+
       try {
-        await this.crawlDirectories(directories, basePath, normalizedQuery, this.deepSearchAbortController.signal, (results, searched) => {
+        await this.crawlDirectories(directories, basePath, normalizedQuery, controller.signal, (results, searched) => {
+          if (controller.signal.aborted || this.deepSearchAbortController !== controller) return;
           totalFound += results.length;
           directoriesSearched = searched;
           this.deepSearchResults.push(...results);
@@ -731,31 +789,32 @@
           console.error('Deep search error:', e);
         }
       }
-      
+
       // Final update
+      if (controller.signal.aborted || this.deepSearchAbortController !== controller) return;
       this.updateDeepSearchUI(totalFound, directoriesSearched, true);
     },
 
     async crawlDirectories(directories, basePath, query, signal, onProgress, depth = 0, maxDepth = 5) {
       if (depth >= maxDepth || signal.aborted) return;
-      
+
       let searched = 0;
-      
+
       for (const dir of directories) {
         if (signal.aborted) break;
-        
+
         try {
           const dirPath = this.resolvePath(basePath, dir.path);
           const response = await fetch(dirPath, { signal });
-          
+
           if (!response.ok) continue;
-          
+
           const html = await response.text();
           const results = this.parseDirectoryListing(html, dirPath, query);
-          
+
           searched++;
           onProgress(results.files, searched);
-          
+
           // Recursively search subdirectories
           if (results.subdirs.length > 0 && depth < maxDepth - 1) {
             await this.crawlDirectories(results.subdirs, dirPath, query, signal, onProgress, depth + 1, maxDepth);
@@ -774,7 +833,7 @@
       if (relativePath.startsWith('/')) {
         return relativePath;
       }
-      
+
       // Ensure basePath ends with /
       const base = basePath.endsWith('/') ? basePath : basePath + '/';
       return base + relativePath;
@@ -784,34 +843,34 @@
       const parser = new DOMParser();
       const doc = parser.parseFromString(html, 'text/html');
       const results = { files: [], subdirs: [] };
-      
+
       // Find all links in the index table
       const rows = doc.querySelectorAll('table tr, #indexlist tr');
-      
+
       rows.forEach(row => {
         const nameCell = row.querySelector('.indexcolname, td:nth-child(2)');
         const link = nameCell?.querySelector('a');
-        
+
         if (!link) return;
-        
+
         const href = link.getAttribute('href');
         const name = link.textContent?.trim() || '';
-        
+
         // Skip parent directory
         if (name === 'Parent Directory' || href === '../') return;
-        
+
         const isDirectory = href?.endsWith('/');
         const nameLower = name.toLowerCase();
-        
+
         if (isDirectory) {
           results.subdirs.push({ path: href, name });
         }
-        
+
         // Check if name matches query
         if (nameLower.includes(query)) {
           const sizeCell = row.querySelector('.indexcolsize, td:nth-child(3)');
           const dateCell = row.querySelector('.indexcollastmod, td:nth-child(4)');
-          
+
           results.files.push({
             name,
             path: this.resolvePath(currentPath, href),
@@ -822,48 +881,48 @@
           });
         }
       });
-      
+
       return results;
     },
 
     updateDeepSearchUI(totalFound, directoriesSearched, isComplete = false) {
       // Update results count
       const localMatches = TableEnhancer.rowData.filter(d => d.visible && !d.isParent).length;
-      const statusText = isComplete 
+      const statusText = isComplete
         ? `${localMatches} local + ${totalFound} in ${directoriesSearched} dirs`
         : `${localMatches} local + ${totalFound}... (${directoriesSearched} dirs)`;
-      
+
       this.resultsCount.innerHTML = statusText;
-      
+
       // Update or create deep search results panel
       this.renderDeepSearchResults();
     },
 
     renderDeepSearchResults() {
       let panel = document.getElementById('deep-search-results');
-      
+
       if (this.deepSearchResults.length === 0) {
         if (panel) panel.remove();
         return;
       }
-      
+
       if (!panel) {
         panel = document.createElement('div');
         panel.id = 'deep-search-results';
         panel.className = 'deep-search-results';
-        
+
         const mainContent = document.getElementById('main-content');
         const tableContainer = document.querySelector('.table-container');
         if (mainContent && tableContainer) {
           mainContent.insertBefore(panel, tableContainer);
         }
       }
-      
+
       // Limit displayed results
       const maxDisplay = 100;
       const displayResults = this.deepSearchResults.slice(0, maxDisplay);
       const hasMore = this.deepSearchResults.length > maxDisplay;
-      
+
       panel.innerHTML = `
         <div class="deep-search-header">
           <h3>
@@ -878,10 +937,10 @@
           ${displayResults.map(result => `
             <a href="${escapeHtml(result.path)}" class="deep-search-item ${result.isDirectory ? 'is-directory' : ''}">
               <span class="deep-search-icon">
-                ${result.isDirectory 
-                  ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>'
-                  : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'
-                }
+                ${result.isDirectory
+          ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>'
+          : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'
+        }
               </span>
               <span class="deep-search-name">${escapeHtml(result.name)}</span>
               <span class="deep-search-path">${escapeHtml(result.displayPath)}</span>
@@ -898,7 +957,7 @@
         this.deepSearchAbortController = null;
       }
       this.deepSearchResults = [];
-      
+
       const panel = document.getElementById('deep-search-results');
       if (panel) panel.remove();
     },
@@ -908,7 +967,7 @@
         this.resultsCount.textContent = '';
         return;
       }
-      
+
       const total = TableEnhancer.rowData.filter(d => !d.isParent).length;
       const hasParent = TableEnhancer.rowData.some(d => d.isParent);
       const visibleFiles = hasParent ? count - 1 : count;
@@ -934,6 +993,7 @@
 
     bindEvents() {
       document.addEventListener('keydown', (e) => {
+        if (e.target.closest('thead a')) return;
         // Ctrl+Shift+F toggles deep search
         if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'F') {
           e.preventDefault();
@@ -941,7 +1001,7 @@
           SearchComponent.input?.focus();
           return;
         }
-        
+
         // Skip if typing in search
         if (document.activeElement === SearchComponent.input) {
           // Allow Tab to exit search
@@ -954,10 +1014,10 @@
           }
           return;
         }
-        
+
         // Skip if modifier keys
         if (e.ctrlKey || e.metaKey || e.altKey) return;
-        
+
         switch (e.key) {
           case 'ArrowDown':
           case 'j':
@@ -1012,14 +1072,14 @@
       this.visibleRows.forEach(d => {
         d.element.classList.remove('keyboard-focused');
       });
-      
+
       this.currentFocusIndex = index;
-      
+
       if (index >= 0 && index < this.visibleRows.length) {
         const row = this.visibleRows[index].element;
         row.classList.add('keyboard-focused');
         row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-        
+
         // Set focus to the link for screen readers
         const link = row.querySelector('a');
         if (link) link.focus();
@@ -1042,31 +1102,31 @@
     create() {
       const path = window.location.pathname;
       const parts = path.split('/').filter(Boolean);
-      
+
       if (parts.length === 0) return null;
-      
+
       const nav = document.createElement('nav');
       nav.id = 'breadcrumb';
       nav.setAttribute('aria-label', 'Breadcrumb');
-      
+
       // Root link
       const rootLink = document.createElement('a');
       rootLink.href = '/';
       rootLink.textContent = 'Root';
       nav.appendChild(rootLink);
-      
+
       // Build breadcrumb trail
       let currentPath = '';
       parts.forEach((part, index) => {
         currentPath += '/' + part;
-        
+
         // Separator
         const separator = document.createElement('span');
         separator.className = 'separator';
         separator.setAttribute('aria-hidden', 'true');
         separator.textContent = '/';
         nav.appendChild(separator);
-        
+
         if (index === parts.length - 1) {
           // Current page (no link)
           const current = document.createElement('span');
@@ -1082,7 +1142,7 @@
           nav.appendChild(link);
         }
       });
-      
+
       return nav;
     },
   };
@@ -1096,7 +1156,7 @@
       const bar = document.createElement('div');
       bar.id = 'stats-bar';
       bar.setAttribute('aria-label', 'Directory statistics');
-      
+
       // Directories count
       if (stats.totalDirs > 0) {
         bar.appendChild(this.createStatItem(
@@ -1105,7 +1165,7 @@
           stats.totalDirs === 1 ? 'directory' : 'directories'
         ));
       }
-      
+
       // Files count
       if (stats.totalFiles > 0) {
         bar.appendChild(this.createStatItem(
@@ -1114,7 +1174,7 @@
           stats.totalFiles === 1 ? 'file' : 'files'
         ));
       }
-      
+
       // Total size
       if (stats.totalSize > 0) {
         bar.appendChild(this.createStatItem(
@@ -1123,7 +1183,7 @@
           'total'
         ));
       }
-      
+
       return bar;
     },
 
@@ -1162,11 +1222,11 @@
       const names = Array.isArray(CONFIG.plugins.list) ? CONFIG.plugins.list : [];
       return Promise.all(names.map(name => new Promise(resolve => {
         const script = document.createElement('script');
-        script.src = `${CONFIG.plugins.path}${encodeURIComponent(name)}/plugin.js`;
+        script.src = `${CONFIG.plugins.path}${encodeURIComponent(name)}/plugin.js?v=20261014`;
         script.async = false;
         const stylesheet = document.createElement('link');
         stylesheet.rel = 'stylesheet';
-        stylesheet.href = `${CONFIG.plugins.path}${encodeURIComponent(name)}/plugin.css`;
+        stylesheet.href = `${CONFIG.plugins.path}${encodeURIComponent(name)}/plugin.css?v=20261014`;
         document.head.appendChild(stylesheet);
         script.onload = resolve;
         script.onerror = () => {
@@ -1272,138 +1332,6 @@
     },
   };
 
-  /* Legacy in-bundle plugins retained only as migration reference. The active
-     implementations are loaded from plugins/<plugin-name>/plugin.js. */
-  /*
-  const CopyLinkPlugin = {
-    id: 'copy-file-url',
-    name: 'Copy file URL',
-    listed: false,
-
-    init() {
-      if (!CONFIG.plugins?.enabled || document.querySelector('.plugin-copy-column')) return;
-      const headerRow = TableEnhancer.thead?.querySelector('tr');
-      if (!headerRow) return;
-
-      const header = document.createElement('th');
-      header.className = 'plugin-copy-column';
-      header.scope = 'col';
-      header.textContent = 'Copy';
-      headerRow.appendChild(header);
-
-      TableEnhancer.rowData.forEach(data => {
-        const cell = document.createElement('td');
-        cell.className = 'plugin-copy-column';
-        if (data.isFile) {
-          const link = data.element.querySelector(CONFIG.selectors.nameColumn)?.querySelector('a');
-          const button = document.createElement('button');
-          button.type = 'button';
-          button.className = 'copy-file-url';
-          button.title = 'Copy full file URL';
-          button.setAttribute('aria-label', `Copy URL for ${data.displayName}`);
-          button.innerHTML = `
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-            </svg>
-          `;
-          button.addEventListener('click', async () => {
-            if (!link) return;
-            const url = new URL(link.getAttribute('href'), window.location.href).href;
-            const copied = await this.copyText(url);
-            button.classList.toggle('copied', copied);
-            button.title = copied ? 'Copied!' : 'Copy failed';
-            if (copied) window.setTimeout(() => {
-              button.classList.remove('copied');
-              button.title = 'Copy full file URL';
-            }, 1500);
-          });
-          cell.appendChild(button);
-        }
-        data.element.appendChild(cell);
-      });
-    },
-
-    async copyText(value) {
-      try {
-        if (navigator.clipboard?.writeText) {
-          await navigator.clipboard.writeText(value);
-          return true;
-        }
-      } catch (error) {
-        // Fall through to the selection-based fallback for older/mobile browsers.
-      }
-
-      const textarea = document.createElement('textarea');
-      textarea.value = value;
-      textarea.setAttribute('readonly', '');
-      textarea.style.position = 'fixed';
-      textarea.style.opacity = '0';
-      document.body.appendChild(textarea);
-      textarea.select();
-      textarea.setSelectionRange(0, textarea.value.length);
-      let copied = false;
-      try {
-        copied = document.execCommand('copy');
-      } catch (error) {
-        copied = false;
-      }
-      textarea.remove();
-      return copied;
-    },
-  };
-  PluginManager.register(CopyLinkPlugin);
-
-  const CreatePlaylistPlugin = {
-    id: 'create-playlist',
-    name: 'Create movie playlist',
-    enabled: true,
-
-    async run() {
-      const movieExtensions = /\.(avi|flv|m4v|mkv|mov|mp4|mpe?g|ts|webm|wmv)$/i;
-      const movies = TableEnhancer.rowData
-        .filter(data => data.isFile && movieExtensions.test(data.displayName))
-        .sort((a, b) => a.displayName.localeCompare(b.displayName, undefined, { numeric: true, sensitivity: 'base' }));
-
-      if (!movies.length) {
-        window.alert('No movie files found in this folder.');
-        return;
-      }
-
-      const entries = movies.flatMap(data => {
-        const link = data.element.querySelector(CONFIG.selectors.nameColumn)?.querySelector('a');
-        if (!link) return [];
-        const url = new URL(link.getAttribute('href'), window.location.href).href;
-        return [`#EXTINF:-1,${this.displayTitle(data.displayName)}`, url];
-      });
-      const playlist = `#EXTM3U\n${entries.join('\n')}\n`;
-      this.download(playlist, 'playlist.m3u');
-    },
-
-    displayTitle(filename) {
-      const title = filename.replace(/\.[^.]+$/, '');
-      const season = title.match(/\bS(\d{1,2})\b/i);
-      const episode = title.match(/\bEpisode\s*[-._ ]?\s*(\d{1,3})\b/i);
-      if (!season || !episode) return title;
-      const episodeNumber = episode[1].padStart(2, '0');
-      return `S${season[1].padStart(2, '0')}E${episodeNumber} - Episode ${episodeNumber}`;
-    },
-
-    download(contents, filename) {
-      const blob = new Blob([contents], { type: 'audio/x-mpegurl;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = filename;
-      link.style.display = 'none';
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-    },
-  };
-  PluginManager.register(CreatePlaylistPlugin);
-  */
 
   window.FancyIndex = window.FancyIndex || {};
   window.FancyIndex.registerPlugin = plugin => PluginManager.register(plugin);
@@ -1412,7 +1340,7 @@
     create() {
       let path = window.location.pathname.replace(/\/$/g, '');
       let titleText;
-      
+
       if (path) {
         const parts = path.split('/');
         path = parts[parts.length - 1];
@@ -1420,46 +1348,46 @@
       } else {
         titleText = window.location.host;
       }
-      
+
       const header = document.createElement('header');
       header.id = 'page-header';
       header.setAttribute('role', 'banner');
-      
+
       // Title
       const h1 = document.createElement('h1');
       h1.textContent = titleText;
       header.appendChild(h1);
-      
+
       // Controls container
       const controls = document.createElement('div');
       controls.className = 'controls-container';
-      
+
       // Search
       controls.appendChild(SearchComponent.createSearchUI());
 
       // Plugins
       const pluginsButton = PluginManager.createToolbarButton();
       if (pluginsButton) controls.appendChild(pluginsButton);
-      
+
       // External app link
       if (CONFIG.externalApp?.enabled) {
         controls.appendChild(this.createExternalAppButton());
       }
-      
+
       // Theme toggle
       controls.appendChild(ThemeManager.createToggleButton());
-      
+
       header.appendChild(controls);
-      
+
       // Update page title
       document.title = `Index of ${titleText}`;
-      
+
       return header;
     },
-    
+
     createExternalAppButton() {
       const { url, name, icon, openInNewTab } = CONFIG.externalApp;
-      
+
       const link = document.createElement('a');
       link.id = 'external-app-link';
       link.href = url;
@@ -1469,7 +1397,7 @@
         link.target = '_blank';
         link.rel = 'noopener noreferrer';
       }
-      
+
       // Icon SVGs
       const icons = {
         download: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -1489,9 +1417,9 @@
           <rect x="3" y="14" width="7" height="7"/>
         </svg>`,
       };
-      
+
       link.innerHTML = icons[icon] || icons.download;
-      
+
       return link;
     },
   };
@@ -1505,16 +1433,16 @@
       // Find the table container
       const tableContainer = document.querySelector('.table-container');
       if (!tableContainer) return;
-      
+
       // Create main content area
       const main = document.createElement('main');
       main.id = 'main-content';
       main.setAttribute('role', 'main');
-      
+
       // Move table container into main
       tableContainer.parentNode.insertBefore(main, tableContainer);
       main.appendChild(tableContainer);
-      
+
       // Add stats bar before table
       const stats = TableEnhancer.getStats();
       if (stats.totalFiles > 0 || stats.totalDirs > 0) {
@@ -1534,7 +1462,7 @@
 
     // Load only the plugins named in CONFIG.plugins.list.
     await PluginManager.loadConfigured();
-    
+
     // Enhance table structure
     if (!TableEnhancer.init()) {
       console.warn('Fancy Index: No table found');
@@ -1543,33 +1471,33 @@
 
     // Initialize loaded plugins after the table has been normalized.
     await PluginManager.initialize();
-    
+
     // Create and insert header
     const header = PageHeader.create();
     document.body.insertBefore(header, document.body.firstChild);
-    
+
     // Create and insert breadcrumb
     const breadcrumb = BreadcrumbNav.create();
     if (breadcrumb) {
       header.after(breadcrumb);
     }
-    
+
     // Wrap main content
     MainContent.wrap();
-    
+
     // Initialize search
     SearchComponent.init();
-    
+
     // Initialize keyboard navigation
     KeyboardNavigation.init();
-    
+
     // Remove no-js class, add js class
     document.body.classList.remove('no-js');
     document.body.classList.add('js');
-    
+
     // Mark document as ready
     document.documentElement.setAttribute('data-ready', '');
-    
+
     // Log info
     console.log('Fancy Index v2.0.0 initialized');
   }

@@ -12,6 +12,11 @@ function respond(int $status, array $payload): void
     exit;
 }
 
+function isProtectedPath(string $path): bool
+{
+    return preg_match('{(?:^|/)\.[^/]*|(?:\.(?:bak|backup|old|orig|save|swp|tmp)|~)$|(?:^|/)#[^/]*#$}iD', $path) === 1;
+}
+
 $root = realpath($_SERVER['DOCUMENT_ROOT'] ?? dirname(__DIR__, 3));
 $referer = $_SERVER['HTTP_REFERER'] ?? '';
 $requestedFile = $_GET['file'] ?? '';
@@ -26,25 +31,39 @@ if (!is_string($requestedFile) || $requestedFile === '') {
     respond(400, ['error' => 'File name required']);
 }
 
-$requestedFile = rawurldecode($requestedFile);
-if ($requestedFile === '.' || $requestedFile === '..' || strpbrk($requestedFile, '/' . chr(92)) !== false) {
+if ($requestedFile === '.' || $requestedFile === '..' || strpbrk($requestedFile, '/' . chr(92) . chr(0)) !== false) {
     respond(400, ['error' => 'Invalid file name']);
+}
+if (isProtectedPath($requestedFile)) {
+    respond(403, ['error' => 'Protected file']);
 }
 
 $refererPath = $refererParts['path'] ?? '/';
 $lastSlash = strrpos($refererPath, '/');
 $directoryPath = $lastSlash === false ? '/' : substr($refererPath, 0, $lastSlash + 1);
 $directoryPath = rawurldecode($directoryPath);
+if (strpos($directoryPath, chr(0)) !== false) {
+    respond(400, ['error' => 'Invalid directory']);
+}
+if (isProtectedPath($directoryPath)) {
+    respond(403, ['error' => 'Protected directory']);
+}
 $directory = realpath($root . DIRECTORY_SEPARATOR . ltrim($directoryPath, '/'));
 $rootPrefix = rtrim($root, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
 
 if ($directory === false || !is_dir($directory) || ($directory !== $root && strpos($directory, $rootPrefix) !== 0)) {
     respond(403, ['error' => 'Invalid directory']);
 }
+if ($directory !== $root && isProtectedPath(substr($directory, strlen($rootPrefix)))) {
+    respond(403, ['error' => 'Protected directory']);
+}
 
 $fullPath = realpath($directory . DIRECTORY_SEPARATOR . $requestedFile);
 if ($fullPath === false || dirname($fullPath) !== $directory || !is_file($fullPath)) {
     respond(404, ['error' => 'File not found']);
+}
+if (isProtectedPath(substr($fullPath, strlen($rootPrefix)))) {
+    respond(403, ['error' => 'Protected file']);
 }
 
 $fileStat = @stat($fullPath);
