@@ -215,6 +215,12 @@ AddIcon /fancy-index/icons/your-icon.svg .yourext
 AddDescription "Your file type" .yourext
 ```
 
+Icons use the default vscode-icons artwork, shared across related extensions.
+Their MIT license is included in `icons/LICENSE-vscode-icons.txt`.
+Each SVG has one `AddIcon` line containing all its patterns; descriptions follow
+in a separate block. Keep icon groups in order so specific matches precede broader
+rules. Apache descriptions use substring matching, so keep specific descriptions first.
+
 ## Keyboard Shortcuts
 
 | Key | Action |

@@ -3,7 +3,7 @@
 
   window.FancyIndex.registerPlugin({
     id: 'file-size-refresh',
-    name: 'Refresh directory and file sizes',
+    name: 'File sizes on page load',
     listed: false,
 
     init({ config, tableEnhancer, formatBytes }) {
@@ -14,16 +14,7 @@
         data.diskSizeComplete = false;
       });
 
-      this.refreshSizes({ config, tableEnhancer, formatBytes });
-      this.sizeTimer = window.setInterval(
-        () => this.refreshSizes({ config, tableEnhancer, formatBytes }),
-        config.downloadSizeRefreshInterval
-      );
-
-      this.refreshDirectory(config);
-      document.addEventListener('visibilitychange', () => {
-        if (!document.hidden) this.checkDirectory(config);
-      });
+      return this.refreshSizes({ config, tableEnhancer, formatBytes });
     },
 
     async refreshSizes({ config, tableEnhancer, formatBytes }) {
@@ -77,61 +68,7 @@
         data.sizeCell.textContent = `${allocatedDisplay}/${totalDisplay}`;
         data.sizeCell.title = `Allocated on disk: ${formatBytes(allocatedBytes)} of ${formatBytes(totalBytes)}`;
       } catch (error) {
-        // Keep the Apache value and retry on the next interval.
-      }
-    },
-
-    refreshDirectory(config) {
-      this.readSignature().then(signature => {
-        if (signature) {
-          this.signature = signature;
-          this.startDirectoryTimer(config);
-        }
-      });
-    },
-
-    startDirectoryTimer(config) {
-      if (this.directoryTimer) window.clearInterval(this.directoryTimer);
-      this.directoryTimer = window.setInterval(
-        () => this.checkDirectory(config),
-        config.directoryRefreshInterval
-      );
-    },
-
-    async checkDirectory(config) {
-      if (this.requestInFlight || this.reloading) return;
-      const signature = await this.readSignature();
-      if (!signature || !this.signature || signature === this.signature) return;
-      this.reloading = true;
-      window.location.reload();
-    },
-
-    async readSignature() {
-      if (this.requestInFlight) return null;
-      this.requestInFlight = true;
-      try {
-        const requestOptions = {
-          cache: 'no-store',
-          credentials: 'same-origin',
-          headers: { 'Cache-Control': 'no-cache' },
-        };
-        const headResponse = await fetch(window.location.href, { ...requestOptions, method: 'HEAD' });
-        if (headResponse.ok) {
-          const headerSignature = [
-            headResponse.headers.get('ETag'),
-            headResponse.headers.get('Last-Modified'),
-            headResponse.headers.get('Content-Length'),
-          ].filter(Boolean).join('|');
-          if (headerSignature) return `headers:${headerSignature}`;
-        }
-
-        const listingResponse = await fetch(window.location.href, requestOptions);
-        if (!listingResponse.ok) return null;
-        return `body:${await listingResponse.text()}`;
-      } catch (error) {
-        return null;
-      } finally {
-        this.requestInFlight = false;
+        // Keep the Apache value if the size request fails.
       }
     },
   });

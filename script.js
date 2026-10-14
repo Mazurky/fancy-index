@@ -20,9 +20,7 @@
     themeStorageKey: 'fancy-index-theme',
     // Search debounce delay (ms)
     searchDebounceDelay: 150,
-    // Plugin polling and file-size endpoint settings
-    directoryRefreshInterval: 5000,
-    downloadSizeRefreshInterval: 5000,
+    // File-size endpoint
     fileSizeEndpoint: '/fancy-index/plugins/file-size-refresh/file-size.php',
     // Date format options
     dateFormatOptions: {
@@ -1222,7 +1220,7 @@
       const names = Array.isArray(CONFIG.plugins.list) ? CONFIG.plugins.list : [];
       return Promise.all(names.map(name => new Promise(resolve => {
         const script = document.createElement('script');
-        script.src = `${CONFIG.plugins.path}${encodeURIComponent(name)}/plugin.js?v=20261014`;
+        script.src = `${CONFIG.plugins.path}${encodeURIComponent(name)}/plugin.js?v=20261014.1`;
         script.async = false;
         const stylesheet = document.createElement('link');
         stylesheet.rel = 'stylesheet';
@@ -1460,17 +1458,11 @@
     // Initialize theme first
     ThemeManager.init();
 
-    // Load only the plugins named in CONFIG.plugins.list.
-    await PluginManager.loadConfigured();
-
     // Enhance table structure
     if (!TableEnhancer.init()) {
       console.warn('Fancy Index: No table found');
       return;
     }
-
-    // Initialize loaded plugins after the table has been normalized.
-    await PluginManager.initialize();
 
     // Create and insert header
     const header = PageHeader.create();
@@ -1498,14 +1490,21 @@
     // Mark document as ready
     document.documentElement.setAttribute('data-ready', '');
 
-    // Log info
-    console.log('Fancy Index v2.0.0 initialized');
+    // Optional plugins must not delay the first finished layout.
+    await PluginManager.loadConfigured();
+    PluginManager.renderMenu();
+    await PluginManager.initialize();
   }
 
   // Run on DOM ready
+  function start() {
+    init().catch(error => console.error('Fancy Index: Initialization failed', error))
+      .finally(() => document.documentElement.setAttribute('data-ready', ''));
+  }
+
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', start);
   } else {
-    init();
+    start();
   }
 })();
