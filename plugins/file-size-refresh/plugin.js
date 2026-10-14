@@ -1,4 +1,4 @@
-(function() {
+(function () {
   'use strict';
 
   window.FancyIndex.registerPlugin({
@@ -27,8 +27,20 @@
     },
 
     async refreshSizes({ config, tableEnhancer, formatBytes }) {
-      const incompleteFiles = tableEnhancer.rowData.filter(data => data.isFile && !data.diskSizeComplete);
-      await Promise.all(incompleteFiles.map(data => this.updateSize(data, config, formatBytes)));
+      if (this.sizeRequestInFlight || document.hidden) return;
+      this.sizeRequestInFlight = true;
+      try {
+        const incompleteFiles = tableEnhancer.rowData.filter(data => data.isFile && !data.diskSizeComplete);
+        const previousSizes = incompleteFiles.map(data => data.sizeBytes);
+        for (let index = 0; index < incompleteFiles.length && !document.hidden; index += 4) {
+          await Promise.all(incompleteFiles.slice(index, index + 4).map(data => this.updateSize(data, config, formatBytes)));
+        }
+        if (tableEnhancer.sortColumn === 'S' && incompleteFiles.some((data, index) => data.sizeBytes !== previousSizes[index])) {
+          tableEnhancer.sort('S');
+        }
+      } finally {
+        this.sizeRequestInFlight = false;
+      }
     },
 
     async updateSize(data, config, formatBytes) {
@@ -51,9 +63,11 @@
         const totalBytes = Number(payload.size);
         const allocatedBytes = Number(payload.allocated);
         if (!Number.isFinite(totalBytes) || !Number.isFinite(allocatedBytes) || totalBytes <= 0) return;
+        data.sizeBytes = totalBytes;
 
-        // Preserve Apache's original display when the allocation equals the file size.
         if (allocatedBytes >= totalBytes) {
+          data.sizeCell.textContent = formatBytes(totalBytes).replace(' ', '');
+          data.sizeCell.title = '';
           data.diskSizeComplete = true;
           return;
         }

@@ -10,6 +10,10 @@ AddEncoding gzip svgz
 # Security Configuration
 # ==========================================================================
 
+# Block hidden path components; allow only standard ACME challenge tokens.
+RewriteEngine On
+RewriteRule "^(?!\.well-known/acme-challenge/[A-Za-z0-9_-]+$)(?:[^/]+/)*\." - [F]
+
 # Protect .htaccess and other sensitive files
 <Files ~ "^\.">
   <IfVersion < 2.3>
